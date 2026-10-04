@@ -1,10 +1,9 @@
 import streamlit as st
-import psycopg2
-from langchain_ollama import OllamaEmbeddings
 import os
 from PIL import Image
 import base64
 import json
+import requests
 
 # Carregar configuração do cliente
 try:
@@ -132,12 +131,7 @@ st.markdown("""
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
-# Banco de dados Mock para testes de Perfil
-MOCK_USERS = {
-    "admin": {"senha": "123", "perfil": "Diretoria", "nome": "Ronaldo"},
-    "dev": {"senha": "123", "perfil": "Desenvolvimento", "nome": "Engenheiro"},
-    "cliente": {"senha": "123", "perfil": "Cliente B2B", "nome": "Parceiro Daisugi"}
-}
+API_BASE_URL = "http://localhost:8000"
 
 if not st.session_state.autenticado:
     # Mostramos o Avatar na portaria também para dar boas-vindas
@@ -160,75 +154,26 @@ if not st.session_state.autenticado:
             submit_btn = st.form_submit_button("Entrar no Lobby")
             
             if submit_btn:
-                if usuario in MOCK_USERS and MOCK_USERS[usuario]["senha"] == senha:
-                    st.session_state.autenticado = True
-                    st.session_state.paciente_nome = MOCK_USERS[usuario]["nome"]
-                    st.session_state.paciente_perfil = MOCK_USERS[usuario]["perfil"]
-                    st.rerun()
-                else:
-                    st.error("❌ Credenciais inválidas.")
+                try:
+                    res = requests.post(f"{API_BASE_URL}/auth/login", json={"usuario": usuario, "senha": senha})
+                    if res.status_code == 200:
+                        dados = res.json()
+                        st.session_state.autenticado = True
+                        st.session_state.paciente_nome = dados["nome"]
+                        st.session_state.paciente_perfil = dados["perfil"]
+                        st.rerun()
+                    else:
+                        st.error("❌ Credenciais inválidas.")
+                except requests.exceptions.ConnectionError:
+                    st.error("❌ Erro: O Backend da Dai não está rodando. Inicie a API primeiro.")
     
     # Se não autenticado, paramos o código aqui
     st.stop()
 
 # ==========================================
-# 1. CONEXÃO COM O RAG (O Cérebro da Dai)
+# 1. COMUNICAÇÃO COM O CÉREBRO DA DAI (API)
 # ==========================================
-def get_db_connection():
-    return psycopg2.connect(
-        host="localhost",
-        port="5432",
-        database="memoria_vetorial",
-        user="admin",
-        password="masterkey123"
-    )
-
-def setup_dai_memory():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS dai_memoria (
-                id SERIAL PRIMARY KEY,
-                texto_original TEXT,
-                embedding vector(768),
-                acao_tipo TEXT,
-                destino TEXT,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        st.error(f"Erro na homeostase do banco de dados: {e}")
-
-setup_dai_memory()
-
-@st.cache_resource
-def get_embeddings_model():
-    return OllamaEmbeddings(model="nomic-embed-text")
-
-embedder = get_embeddings_model()
-
-def buscar_na_memoria(texto):
-    vetor_busca = embedder.embed_query(texto)
-    vetor_str = f"[{','.join(map(str, vetor_busca))}]"
-    
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT texto_original, acao_tipo, destino, embedding <-> %s::vector AS distancia
-        FROM dai_memoria
-        ORDER BY distancia ASC
-        LIMIT 1;
-    """, (vetor_str,))
-    
-    resultado = cur.fetchone()
-    cur.close()
-    conn.close()
-    return resultado, vetor_busca
+# Toda a lógica de RAG, Embeddings e PostgreSQL foi migrada para o api_backend.py
 
 # ==========================================
 # 3. INTERFACE DA CLÍNICA
@@ -343,24 +288,16 @@ with col_chat:
                 st.session_state.messages.append({"role": "assistant", "content": "🤫 Extraindo registros da mente vetorial..."})
                 st.rerun()
             
-            resultado, vetor = buscar_na_memoria(prompt)
-            distancia = resultado[3] if resultado else 999.0
-            
-            if resultado and distancia < 0.3:
-                destino = resultado[2]
-                resposta_dai = f"🔍 Suas métricas são claras. Encaminhando para o **{destino}**..."
-                st.session_state.laudo_final = f"✅ Triagem Concluída: Rota identificada para {destino}."
-                st.markdown(resposta_dai)
-                st.session_state.messages.append({"role": "assistant", "content": resposta_dai})
-                st.rerun() # Atualiza a tela para mostrar o laudo na direita
-            else:
-                resposta_dai = (
-                    "Para que eu possa direcionar sua queixa para o corredor correto, preciso que refine seu pedido:\n"
-                    "**(i) O QUE** você precisa resolver?\n"
-                    "**(ii) COMO** espera que a equipe ajude?\n"
-                    "**(iii) POR QUE** isso é uma prioridade agora?"
-                )
-                st.session_state.laudo_final = "⚠️ Pendente: A Dai solicitou mais clareza ao paciente antes de acionar os especialistas."
-                st.markdown(resposta_dai)
-                st.session_state.messages.append({"role": "assistant", "content": resposta_dai})
-                st.rerun() # Atualiza o painel direito
+            try:
+                # Chama a API de Triagem
+                res = requests.post(f"{API_BASE_URL}/chat/triage", json={"texto_usuario": prompt})
+                if res.status_code == 200:
+                    dados = res.json()
+                    st.session_state.laudo_final = dados["laudo_final"]
+                    st.markdown(dados["resposta_dai"])
+                    st.session_state.messages.append({"role": "assistant", "content": dados["resposta_dai"]})
+                    st.rerun() # Atualiza a tela para mostrar o laudo na direita
+                else:
+                    st.error("❌ Erro interno na Mente Vetorial da Dai.")
+            except requests.exceptions.ConnectionError:
+                st.error("❌ Conexão perdida com o Backend da Dai.")
