@@ -32,12 +32,18 @@ Isso força a criação de um bloco de texto muito mais rico. Quando o usuário 
 
 ---
 
-## 3. Isolamento Multi-Tenant e Segurança de Dados
+## 3. Arquitetura de RAG Híbrido (Isolamento Multi-Tenant e Memória Global)
 
-Para assegurar que as informações (Prontuários e RAG) de um cliente B2B nunca cruzem com as de outro cliente, a Dai utiliza **Isolamento Físico de Memória**.
+A grande inovação arquitetural da Dai é seu **RAG Híbrido**. Para garantir que a sabedoria coletiva beneficie todos os clientes da Daisugi, sem comprometer a confidencialidade de dados (Data Leakage), nós separamos as memórias em dois níveis:
 
-- Em vez de uma tabela gigante onde dados se misturam, o banco de dados cria fisicamente tabelas isoladas: `memoria_controladoria`, `memoria_juridico`, etc.
-- **Segurança de Consulta Simultânea:** O back-end lê a matriz de permissões do usuário logado (Tabela `usuario_clientes`) e monta uma query SQL dinâmica utilizando `UNION ALL` **apenas** nas tabelas que o usuário tem acesso. Isso elimina o risco de "Data Leakage" (Vazamento de dados) via prompt injection.
+### 3.1. Memória Global Coletiva (`memoria_global_daisugi`)
+Uma tabela de uso geral contendo resoluções anonimizadas e procedimentais (Ex: *Como resetar a senha, dúvidas sobre a plataforma Daisugi*). Qualquer aprendizado salvo aqui passa a beneficiar **todos** os usuários instantaneamente.
+
+### 3.2. Memórias Isoladas de Clientes (Isolamento Físico Nível 2)
+Para cada cliente B2B da Daisugi, é criada uma tabela física no banco (Ex: `memoria_controladoria`, `memoria_juridico`). Se o especialista definir que um atendimento contém dados sensíveis (contratos, compliance interno), a inteligência vai apenas para essa tabela. O isolamento é absoluto.
+
+### 3.3. Segurança de Consulta Simultânea (A União)
+O back-end lê a matriz de permissões do usuário logado e monta uma query SQL dinâmica utilizando `UNION ALL`. A matemática busca o vetor do usuário **simultaneamente** na `memoria_global_daisugi` e apenas nas tabelas de clientes que ele tem permissão de acesso. Isso elimina o risco de vazamento, cruzamento indevido ou prompt injection.
 
 ---
 
@@ -47,8 +53,10 @@ A inteligência da Dai não vem de pré-treinamentos fixos, mas sim de uma **Evo
 
 1. **Geração do Prontuário:** A queixa inicial somada às respostas das 3 perguntas universais formam o Prontuário do usuário.
 2. **Resolução:** O especialista (Dr. Taylor Code, Dr. Qwen, etc) nas salas específicas (Corredores) realiza o atendimento e encerra a demanda.
-3. **Aprendizado da Máquina (Lastro):** A rota `/triage/learn` é acionada. O Prontuário completo + a Solução do especialista são vetorizados e gravados na tabela `memoria_<cliente>`.
-4. **Ciclo de Segurança:** No próximo atendimento similar, o `pgvector` encontrará esse Prontuário com `distancia < 0.3`. A Dai poderá então resolver a questão instantaneamente no Lobby, esvaziando a fila dos especialistas. Esta evolução acontece em banco de dados isolado (RAG) sem precisar re-treinar ou expor dados para APIs de Inteligência Artificial externas.
+3. **Aprendizado da Máquina (Lastro):** A rota `/triage/learn` é acionada. O Prontuário completo + a Solução do especialista são vetorizados. O especialista decide no formulário de encerramento:
+   - Se for conhecimento Genérico/Operacional, envia (com `is_global=true`) para a `memoria_global_daisugi`.
+   - Se for conhecimento Sensível/Restrito, envia para a `memoria_<cliente>` (Tabela isolada).
+4. **Ciclo de Segurança Híbrido:** No próximo atendimento, o `pgvector` buscará simultaneamente na rede global e nas redes restritas daquele usuário. Encontrando um Prontuário com `distancia < 0.3`, a Dai resolve o ticket na recepção. Esta evolução constante permite que a plataforma inteira cresça coletivamente em inteligência, preservando o sigilo corporativo.
 
 ---
 
