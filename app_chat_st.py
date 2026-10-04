@@ -24,6 +24,108 @@ page_title = config.get("empresa", {}).get("nome", "Clínica Neural | Dai")
 page_icon = config.get("empresa", {}).get("icone", "👩🏻‍💼")
 st.set_page_config(page_title=page_title, page_icon=page_icon, layout="wide")
 
+# INJEÇÃO DE CSS PREMIUM (BRAND DAISUGI)
+st.markdown("""
+<style>
+    /* Fontes Globais */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="css"]  {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+    
+    /* Fundo Escuro Premium */
+    .stApp {
+        background-color: #0B192C !important;
+        background-image: 
+            linear-gradient(to right, rgba(30, 41, 59, 0.6) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(30, 41, 59, 0.6) 1px, transparent 1px) !important;
+        background-size: 20px 20px !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Ocultar menus padrões do Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Cards e Elementos com Glassmorphism */
+    div[data-testid="stForm"], div[data-testid="stSidebar"] {
+        background: rgba(15, 23, 42, 0.7) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    /* Textos Base */
+    h1, h2, h3, h4, h5, h6, p, span, div {
+        color: #f1f5f9;
+    }
+
+    /* Botões */
+    button[kind="primary"], button[data-testid="baseButton-secondaryFormSubmit"] {
+        background-color: #10b981 !important; /* Emerald 500 */
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3) !important;
+    }
+    button[kind="primary"]:hover, button[data-testid="baseButton-secondaryFormSubmit"]:hover {
+        background-color: #059669 !important; /* Emerald 600 */
+        transform: translateY(-2px) !important;
+    }
+
+    /* Inputs de Texto */
+    input, textarea, .stChatInputContainer {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+        color: #f1f5f9 !important;
+        border-radius: 8px !important;
+    }
+    input:focus, textarea:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 1px #10b981 !important;
+    }
+
+    /* Alertas Sucesso/Aviso/Info */
+    .stAlert {
+        border-radius: 12px !important;
+        border: none !important;
+    }
+    div[data-testid="stNotificationSuccess"], div[data-testid="stAlert"] > div:has(svg[aria-label="success"]) {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        border-left: 4px solid #10b981 !important;
+        color: #d1fae5 !important;
+    }
+    div[data-testid="stNotificationWarning"], div[data-testid="stAlert"] > div:has(svg[aria-label="warning"]) {
+        background-color: rgba(245, 158, 11, 0.15) !important;
+        border-left: 4px solid #f59e0b !important;
+        color: #fef3c7 !important;
+    }
+    div[data-testid="stNotificationInfo"], div[data-testid="stAlert"] > div:has(svg[aria-label="info"]) {
+        background-color: rgba(56, 189, 248, 0.15) !important;
+        border-left: 4px solid #38bdf8 !important;
+        color: #e0f2fe !important;
+    }
+    
+    /* Área de Chat (Dai) */
+    .stChatMessage {
+        background-color: transparent !important;
+    }
+    div[data-testid="stChatMessageContent"] {
+        background-color: #1e293b !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        border: 1px solid #334155 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
 # ==========================================
 # 0. TELA DE AUTENTICAÇÃO (LOGIN)
 # ==========================================
