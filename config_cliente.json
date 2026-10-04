@@ -1,0 +1,32 @@
+{
+  "empresa": {
+    "nome": "Clínica Neural | Dai",
+    "logo": "Dai_Avatar.png",
+    "icone": "👩🏻‍💼"
+  },
+  "tema": {
+    "cor_primaria": "#00B4D8",
+    "cor_secundaria": "#00A86B"
+  },
+  "textos": {
+    "titulo_portaria": "🔒 Portaria - Daisugi",
+    "subtitulo_portaria": "*Por favor, identifique-se antes de acessar nosso Lobby*",
+    "termo_usuario_logado": "Usuário Logado",
+    "termo_perfil_acesso": "Perfil de Acesso",
+    "titulo_corredor": "Corredor de",
+    "titulo_ficha": "Ficha do Paciente (Prontuário)",
+    "label_historico": "Histórico Clínico e Queixas Anteriores:",
+    "valor_historico_padrao": "Nenhum histórico grave registrado hoje.\n\nAguardando triagem...",
+    "titulo_laudo": "Laudo de Triagem / Diagnóstico",
+    "laudo_vazio": "Nenhum laudo emitido ainda. Fale com a Dai à esquerda.",
+    "titulo_chat": "台 Dai - Triagem e Roteamento",
+    "subtitulo_chat": "*A Recepção Inteligente baseada em Equilibrio, Memória e Sentido.*",
+    "mensagem_boas_vindas": "Olá, sou a Dai. O que te trouxe até aqui? Como posso te ajudar?",
+    "dica_input_chat": "Diga sua queixa à Dai..."
+  },
+  "avatar": {
+    "imagem": "Dai_Avatar.png",
+    "emoji": "👩🏻‍💼",
+    "icone_usuario": "👤"
+  }
+}
