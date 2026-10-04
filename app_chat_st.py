@@ -159,8 +159,10 @@ if not st.session_state.autenticado:
                     if res.status_code == 200:
                         dados = res.json()
                         st.session_state.autenticado = True
-                        st.session_state.paciente_nome = dados["nome"]
-                        st.session_state.paciente_perfil = dados["perfil"]
+                        st.session_state.paciente_id = dados.get("id_usuario", 1)
+                        st.session_state.paciente_nome = dados.get("nome", "Usuário")
+                        st.session_state.paciente_perfil = dados.get("perfil", "Desconhecido")
+                        st.session_state.salas_liberadas = dados.get("salas_liberadas", [])
                         st.rerun()
                     else:
                         st.error("❌ Credenciais inválidas.")
@@ -198,29 +200,19 @@ with col_salas:
     titulo_corredor = config.get("textos", {}).get("titulo_corredor", "Corredor de")
     st.markdown(f"### 🚪 {titulo_corredor} {st.session_state.paciente_perfil}")
     
-    # Renderiza as portas dependendo do perfil do usuário
+    # Renderiza as portas dependendo das salas liberadas para o usuário (Multi-Tenant Dinâmico)
     col_s1, col_s2 = st.columns(2)
     
-    if st.session_state.paciente_perfil == "Desenvolvimento":
-        with col_s1:
-            st.success("💻 Dr. Taylor Code (Orquestrador)\n\n`🟢 Online`")
-            st.info("⚙️ DevOps (Infra)\n\n`🟢 Online`")
-        with col_s2:
-            st.warning("🐛 Caçador de Bugs (QA)\n\n`🟢 Online`")
-            
-    elif st.session_state.paciente_perfil == "Cliente B2B":
-        with col_s1:
-            st.info("📈 Dr. Qwen (Consultoria)\n\n`🟢 Online`")
-        with col_s2:
-            st.warning("⚖️ Dr. Saul (Contratos)\n\n`🟢 Online`")
-            
-    else: # Diretoria / Admin vê tudo
-        with col_s1:
-            st.info("📈 Dr. Qwen (Finanças)\n\n`🟢 Online`")
-            st.error("🔍 Mistral (Investigador)\n\n`🟢 Online`")
-        with col_s2:
-            st.warning("⚖️ Dr. Saul (Jurídico)\n\n`🟢 Online`")
-            st.success("🧠 Llama 3.1 (Maestro)\n\n`🟢 Online`")
+    salas = st.session_state.get("salas_liberadas", [])
+    
+    if not salas:
+        st.warning("Nenhuma sala liberada para este perfil.")
+    else:
+        cores = [st.info, st.warning, st.success, st.error]
+        for i, sala in enumerate(salas):
+            col = col_s1 if i % 2 == 0 else col_s2
+            with col:
+                cores[i % len(cores)](f"🚪 {sala}\n\n`🟢 Online`")
     
     st.markdown("---")
     
@@ -290,7 +282,10 @@ with col_chat:
             
             try:
                 # Chama a API de Triagem
-                res = requests.post(f"{API_BASE_URL}/chat/triage", json={"texto_usuario": prompt})
+                res = requests.post(f"{API_BASE_URL}/chat/triage", json={
+                    "texto_usuario": prompt,
+                    "id_usuario": st.session_state.get("paciente_id", 1)
+                })
                 if res.status_code == 200:
                     dados = res.json()
                     st.session_state.laudo_final = dados["laudo_final"]
