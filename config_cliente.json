@@ -1,7 +1,7 @@
 {
   "empresa": {
     "nome": "Plataforma Central | Dai",
-    "logo": "Dai_Avatar.png",
+    "logo": "Dai_Avatar_Brand.jpg",
     "icone": "👩🏻‍💼"
   },
   "tema": {
@@ -25,7 +25,7 @@
     "dica_input_chat": "Descreva sua demanda para a Dai..."
   },
   "avatar": {
-    "imagem": "Dai_Avatar.png",
+    "imagem": "Dai_Avatar_Brand.jpg",
     "emoji": "👩🏻‍💼",
     "icone_usuario": "👤"
   }
