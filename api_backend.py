@@ -45,6 +45,7 @@ class FeedbackRequest(BaseModel):
     destino_final: str
     cliente_destino: str
     resolucao_especialista: str
+    is_global: bool = False
 
 class FeedbackResponse(BaseModel):
     status: str
@@ -94,6 +95,18 @@ def setup_enterprise_database():
                 nome TEXT,
                 funcao TEXT,
                 cor TEXT
+            );
+        """)
+
+        # Tabela Global de Aprendizado Coletivo (Anônima e Genérica)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS memoria_global_daisugi (
+                id SERIAL PRIMARY KEY,
+                texto_original TEXT,
+                resolucao_contexto TEXT,
+                embedding vector(768),
+                destino TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
 
@@ -200,13 +213,17 @@ def triage(request: TriageRequest):
             laudo_final="❌ Acesso Negado."
         )
 
-    # 2. Busca Matemática RAG (Simultânea via UNION ALL)
+    # 2. Busca Matemática RAG Híbrida (Simultânea via UNION ALL)
     vetor_busca = embedder.embed_query(prompt)
     vetor_str = f"[{','.join(map(str, vetor_busca))}]"
     
     query_parts = []
+    
+    # 2.1 Adiciona a Memória Global de Aprendizado Coletivo
+    query_parts.append(f"(SELECT texto_original, destino, 'Global (Daisugi)' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_global_daisugi ORDER BY distancia ASC LIMIT 1)")
+
+    # 2.2 Adiciona as Memórias Isoladas do Cliente
     for c in clientes:
-        # A matemática não sabe origem, ela apenas calcula a distância L2 (<->).
         part = f"(SELECT texto_original, destino, '{c}' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_{c} ORDER BY distancia ASC LIMIT 1)"
         query_parts.append(part)
         
@@ -264,17 +281,20 @@ def aprender_com_triagem(request: FeedbackRequest):
     vetor_novo = embedder.embed_query(texto_aprendizado)
     vetor_str = f"[{','.join(map(str, vetor_novo))}]"
     
-    # 3. Injetar na memória específica daquele Tenant (Lastro de Aprendizado)
+    # 3. Injetar na memória correspondente (Global ou Isolada)
+    tabela_alvo = "memoria_global_daisugi" if request.is_global else f"memoria_{request.cliente_destino}"
+    
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute(f"""
-            INSERT INTO memoria_{request.cliente_destino} (texto_original, resolucao_contexto, destino, embedding)
+            INSERT INTO {tabela_alvo} (texto_original, resolucao_contexto, destino, embedding)
             VALUES (%s, %s, %s, %s::vector)
         """, (request.texto_usuario, request.resolucao_especialista, request.destino_final, vetor_str))
         conn.commit()
         status = "sucesso"
-        msg = f"A Dai evoluiu. Nova trilha sináptica criada no domínio '{request.cliente_destino}'."
+        tipo_memoria = "Global Coletiva" if request.is_global else f"Isolada ({request.cliente_destino})"
+        msg = f"A Dai evoluiu. Nova trilha sináptica criada na Memória {tipo_memoria}."
     except Exception as e:
         status = "erro"
         msg = str(e)
