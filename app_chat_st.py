@@ -191,12 +191,13 @@ with st.sidebar:
         st.session_state.autenticado = False
         st.rerun()
 
-col_chat, col_salas = st.columns([6, 4])
+# Mobile-First: Substituição de Colunas (que empilham mal no celular) por Abas (Tabs) interativas
+tab_chat, tab_salas, tab_ficha = st.tabs(["💬 Lobby (Recepção)", "🚪 Salas e Corredores", "📋 Seu Contexto (Ticket/Laudo)"])
 
 # ----------------------------------------------------
-# LADO DIREITO: O CORREDOR E PRONTUÁRIOS
+# TAB 2: O CORREDOR E SALAS
 # ----------------------------------------------------
-with col_salas:
+with tab_salas:
     titulo_corredor = config.get("textos", {}).get("titulo_corredor", "Corredor de")
     st.markdown(f"### 🚪 {titulo_corredor} {st.session_state.paciente_perfil}")
     
@@ -212,32 +213,36 @@ with col_salas:
         for i, sala in enumerate(salas):
             col = col_s1 if i % 2 == 0 else col_s2
             with col:
-                cores[i % len(cores)](f"🚪 {sala}\n\n`🟢 Online`")
-    
-    st.markdown("---")
-    
-    # FICHA DO PACIENTE
-    titulo_ficha = config.get("textos", {}).get("titulo_ficha", "Ficha do Paciente (Prontuário)")
-    label_historico = config.get("textos", {}).get("label_historico", "Histórico Clínico e Queixas Anteriores:")
-    valor_historico_padrao = config.get("textos", {}).get("valor_historico_padrao", "Nenhum histórico grave registrado hoje.\\n\\nAguardando triagem...")
+                cores[i % len(cores)](f"🚪 {sala.get('nome', sala)} - {sala.get('funcao', '')}\n\n`🟢 Online`" if isinstance(sala, dict) else f"🚪 {sala}\n\n`🟢 Online`")
+
+# ----------------------------------------------------
+# TAB 3: FICHA E LAUDO FINAL
+# ----------------------------------------------------
+with tab_ficha:
+    # FICHA DO PACIENTE / TICKET
+    titulo_ficha = config.get("textos", {}).get("titulo_ficha", "Contexto do Usuário (Ticket)")
+    label_historico = config.get("textos", {}).get("label_historico", "Histórico de Interações e Demandas Anteriores:")
+    valor_historico_padrao = config.get("textos", {}).get("valor_historico_padrao", "Nenhuma demanda pendente registrada.\\n\\nAguardando triagem no Lobby...")
     
     st.markdown(f"### 📋 {titulo_ficha}")
     st.text_area(label_historico, value=valor_historico_padrao, height=100, disabled=True)
     
+    st.markdown("---")
+    
     # RESULTADO / LAUDO FINAL
-    titulo_laudo = config.get("textos", {}).get("titulo_laudo", "Laudo de Triagem / Diagnóstico")
+    titulo_laudo = config.get("textos", {}).get("titulo_laudo", "Laudo de Triagem / Roteamento")
     st.markdown(f"### 💊 {titulo_laudo}")
     
     # Checa se existe um laudo guardado na sessao
-    laudo_vazio = config.get("textos", {}).get("laudo_vazio", "Nenhum laudo emitido ainda. Fale com a Dai à esquerda.")
+    laudo_vazio = config.get("textos", {}).get("laudo_vazio", "Nenhum roteamento emitido ainda. Fale com a Dai na aba do Lobby.")
     laudo_texto = st.session_state.get("laudo_final", laudo_vazio)
     st.success(laudo_texto)
 
 
 # ----------------------------------------------------
-# LADO ESQUERDO: A RECEPÇÃO (CHAT DA DAI)
+# TAB 1: A RECEPÇÃO (CHAT DA DAI) - Fica por último no código, mas na primeira Aba
 # ----------------------------------------------------
-with col_chat:
+with tab_chat:
     titulo_chat = config.get("textos", {}).get("titulo_chat", "台 Dai - Triagem e Roteamento")
     subtitulo_chat = config.get("textos", {}).get("subtitulo_chat", "*A Recepção Inteligente baseada em Equilibrio, Memória e Sentido.*")
     cor_primaria = config.get("tema", {}).get("cor_primaria", "#00B4D8")
