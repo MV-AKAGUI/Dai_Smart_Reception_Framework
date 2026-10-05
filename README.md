@@ -40,7 +40,9 @@ Todo o ambiente foi arquitetado para ser independente e rodar 100% em infraestru
 | [**Protocolo de Segurança Anti-Alucinação**](./Protocolo_Seguranca_Anti_Alucinacao.md) | As 5 camadas de contenção, premissa de mundo fechado, temperatura 0.0 e validação determinística. | Engenharia, Segurança e IA |
 | [**Documentação Técnica do Back-End**](./Documentacao_Tecnica_Dai_Backend.md) | FastAPI, pgvector, cache O(1), RBAC, endpoints REST e contratos Pydantic. | Arquitetura e Back-End |
 | [**Documentação de Integração Front & Back**](./Documentacao_Integracao_Front_Back.md) | Protocolos de comunicação, diagrama de sequência, estados e timeouts. | Engenharia Full-Stack |
+| [**Integração DAI × HUDSON Core**](./DOCUMENTO_INTEGRACAO_DAI_HUDSON.md) | Contratos de APIs, webhooks, notificação de anfitrião, quarentena e orquestração assíncrona. | Arquitetura e Event Hub |
 | [**Infraestrutura e Deploy Oracle OCI**](./INFRAESTRUTURA_ORACLE_OCI_DEPLOY.md) | Topologia de nuvem, Docker, Caddyfile, dimensionamento Ampere A1 e integrações Kan-sa / Hudson. | DevOps e Cloud |
+| [**Sabatina e Exercício Dr. Taylor Code**](./SABATINA_DR_TAYLOR_EXERCICIO_DAI.md) | Perguntas, respostas de homeostase e roteiro estratégico: Front-End ➔ Hudson ➔ Kan-sa ➔ Back-End. | Arquitetura e Governança |
 
 ---
 *Construído com ❤️ e Lógica pela Daisugi Tecnologias.*

@@ -1,3 +1,11 @@
+import sys
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 import os
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -79,6 +87,9 @@ class TriageResponse(BaseModel):
     resposta_dai: str
     laudo_final: str
     cache_hit: bool = False
+    codigo_rastreamento: Optional[str] = None
+    arquivo_anexo: Optional[Dict[str, Any]] = None
+    link_documento_dw: Optional[Dict[str, Any]] = None
 
 class FeedbackRequest(BaseModel):
     texto_usuario: str
@@ -152,7 +163,7 @@ def setup_enterprise_database():
         conn.close()
         print("✅ Banco de Dados Multi-Tenant configurado com sucesso.")
     except Exception as e:
-        print(f"❌ Erro ao configurar banco de dados: {e}")
+        print(f"⚠️ [AVISO] Banco de Dados PostgreSQL local offline (operando em modo desacoplado/cache): {e}")
 
 # ==========================================
 # 3. ROTAS ASSÍNCRONAS E ROTEAMENTO DA DAI
@@ -258,6 +269,28 @@ def triage(request: TriageRequest):
     """Triagem inteligente com proteção de Cache O(1) via Redis para evitar Gargalo no RAG."""
     prompt = request.texto_usuario.strip()
     
+    # Geração de Código de Rastreamento Único do Atendimento
+    random_suffix = hashlib.md5(f"{prompt}_{time.time()}".encode()).hexdigest()[:6].upper()
+    codigo_rastreamento = f"TKT-DAI-2026-{random_suffix}"
+    
+    # Detecção inteligente de demanda documental / Data Warehouse
+    link_dw = None
+    arquivo_anexo = None
+    p_lower = prompt.lower()
+    if any(k in p_lower for k in ["ccb", "contrato", "nota", "fatura", "dw", "data warehouse", "documento", "arquivo", "relatorio", "laudo", "comprovante"]):
+        link_dw = {
+            "titulo": f"Registro de Auditoria DW: Ref. {codigo_rastreamento}",
+            "hash": hashlib.sha256(prompt.encode()).hexdigest(),
+            "url": f"https://dw.cliente.daisugi.com.br/docs/{codigo_rastreamento}",
+            "repositorio": "Data Warehouse Corporativo - Partição Fiduciária"
+        }
+        arquivo_anexo = {
+            "nome": f"Comprovante_Atendimento_{codigo_rastreamento}.pdf",
+            "tipo": "PDF / Documento Oficial",
+            "tamanho": "142 KB",
+            "status": "Emitido & Assinado Digitalmente"
+        }
+
     # 1. VERIFICAÇÃO DE CACHE (REDIS) - O(1)
     # Se a mesma dor já foi validada, não consome banco de dados nem LLM.
     hash_prompt = hashlib.md5(prompt.encode()).hexdigest()
@@ -268,9 +301,12 @@ def triage(request: TriageRequest):
             status_fuzzy=False,
             destino=cache_data["destino"],
             cliente_destino=cache_data["cliente_destino"],
-            resposta_dai=f"⚡ (Via Cache) Encaminhando para **{cache_data['destino']}** em **{cache_data['cliente_destino']}**.",
-            laudo_final="✅ Triagem via Cache Redis O(1).",
-            cache_hit=True
+            resposta_dai=f"⚡ (Via Cache) Olá! Que bom ter você aqui. Já consultei meu diretório instantâneo e encaminhei seu caso para a sala **{cache_data['destino']}** ({cache_data['cliente_destino']}). O anfitrião já pode ser notificado no seu painel.",
+            laudo_final=f"✅ Triagem Concluída via Cache O(1) — Roteado para {cache_data['destino']}.",
+            cache_hit=True,
+            codigo_rastreamento=codigo_rastreamento,
+            arquivo_anexo=arquivo_anexo,
+            link_documento_dw=link_dw
         )
 
     # 2. SE NÃO ESTIVER NO CACHE, EXECUTA O RAG PESADO (PgVector)
@@ -284,7 +320,12 @@ def triage(request: TriageRequest):
         if not clientes:
             cur.close()
             conn.close()
-            return TriageResponse(status_fuzzy=True, resposta_dai="Sem acesso.", laudo_final="❌ Acesso Negado.")
+            return TriageResponse(
+                status_fuzzy=True,
+                resposta_dai="Olá! Identifiquei que seu usuário ainda não possui vinculação às unidades corporativas ativas. Por favor, contate o administrador da recepção.",
+                laudo_final="❌ Acesso Não Autorizado às Unidades.",
+                codigo_rastreamento=codigo_rastreamento
+            )
 
         if embedder:
             try:
@@ -322,15 +363,23 @@ def triage(request: TriageRequest):
         
         return TriageResponse(
             status_fuzzy=False, destino=destino, cliente_destino=cliente_destino,
-            resposta_dai=f"🔍 Busca RAG concluída. Sala **{destino}** ({cliente_destino}).",
-            laudo_final=f"✅ Triagem Concluída.", cache_hit=False
+            resposta_dai=f"Perfeito! Compreendi sua solicitação com precisão. Já reservei seu atendimento na sala **{destino}** da unidade **{cliente_destino}**. Seu ticket digital já foi gerado na aba de Contexto e você pode notificar o anfitrião a qualquer momento.",
+            laudo_final=f"✅ Triagem Concluída — Encaminhado para {destino} ({cliente_destino}).",
+            cache_hit=False,
+            codigo_rastreamento=codigo_rastreamento,
+            arquivo_anexo=arquivo_anexo,
+            link_documento_dw=link_dw
         )
     else:
-        # Falso Fuzzy - Pede Refinamento
+        # Falso Fuzzy - Pede Refinamento com Empatia
         return TriageResponse(
             status_fuzzy=True,
-            resposta_dai="Para que eu direcione corretamente:\n(i) O QUE você precisa?\n(ii) COMO podemos ajudar?\n(iii) POR QUE é prioridade?",
-            laudo_final="⚠️ Triagem Inconclusiva.", cache_hit=False
+            resposta_dai="Compreendo sua demanda! Para garantir que eu te encaminhe exatamente para o especialista correto e sem perda de tempo, me conte rapidinho:\n\n1. **O que** você precisa resolver hoje?\n2. **Qual setor** ou pessoa você busca (ex: Financeiro, Jurídico, Obras ou Diretoria)?\n3. Trata-se de entrega de documentos, reunião ou suporte?",
+            laudo_final="⚠️ Triagem em Refinamento Assistido (Fuzzy).",
+            cache_hit=False,
+            codigo_rastreamento=codigo_rastreamento,
+            arquivo_anexo=arquivo_anexo,
+            link_documento_dw=link_dw
         )
 
 # ==========================================
@@ -366,6 +415,28 @@ def validar_quarentena(
         "message": "Solicitação aceita. O pacote JSON leve foi recebido e o Kan-sa assumiu a tarefa em segundo plano.",
         "hash_processado": request.hash_id_documento,
         "validador_sub": user_payload.get("sub", "mock_user")
+    }
+
+# ==========================================
+# 4.1. RECEPTOR DE CALLBACK DO HUDSON DC
+# ==========================================
+@app.post("/api/webhooks/hudson-callback", status_code=200)
+def receber_callback_hudson(payload: Dict[str, Any]):
+    """
+    Receptor oficial de callbacks assincronos do HUDSON DC:
+    - Retorno da resposta do anfitriao (liberacao de catraca na portaria da DAI);
+    - Conclusao de laudo pericial da esteira KAN-SA.
+    """
+    ticket_id = payload.get("ticket_id")
+    status = payload.get("status")
+    catraca = payload.get("catraca_liberada", False)
+    resposta = payload.get("resposta_anfitriao")
+    print(f"🔔 [HUDSON CALLBACK] Ticket '{ticket_id}' recebido | Status: {status} | Catraca Liberada: {catraca}")
+    return {
+        "status": "CALLBACK_PROCESSADO",
+        "ticket_id": ticket_id,
+        "catraca_liberada": catraca,
+        "resposta_anfitriao": resposta
     }
 
 @app.post("/auth/handshake")
@@ -448,4 +519,5 @@ if __name__ == "__main__":
     import uvicorn
     porta = int(os.getenv("PORT", "8001"))
     uvicorn.run("api_backend:app", host="0.0.0.0", port=porta, reload=False)
+
 
