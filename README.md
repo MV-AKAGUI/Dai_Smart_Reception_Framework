@@ -33,16 +33,15 @@ Todo o ambiente foi arquitetado para ser independente e rodar 100% em infraestru
 
 ---
 
-## 🚀 Como Iniciar
+## 📚 Central de Documentação Técnica
 
-1. Clone o repositório.
-2. Certifique-se de que o **PostgreSQL (com pgvector)** está rodando na porta `5432` com as credenciais padrão do framework.
-3. Instale os requisitos Python e certifique-se de possuir o servidor do **Ollama** rodando.
-4. Ajuste as informações e o logotipo da sua empresa no `config_cliente.json`.
-5. Execute a interface da Recepção:
-   ```bash
-   streamlit run app_chat_st.py
-   ```
+| Documento | Foco | Público |
+|---|---|---|
+| [**Protocolo de Segurança Anti-Alucinação**](./Protocolo_Seguranca_Anti_Alucinacao.md) | As 5 camadas de contenção, premissa de mundo fechado, temperatura 0.0 e validação determinística. | Engenharia, Segurança e IA |
+| [**Documentação Técnica do Back-End**](./Documentacao_Tecnica_Dai_Backend.md) | FastAPI, pgvector, cache O(1), RBAC, endpoints REST e contratos Pydantic. | Arquitetura e Back-End |
+| [**Documentação de Integração Front & Back**](./Documentacao_Integracao_Front_Back.md) | Protocolos de comunicação, diagrama de sequência, estados e timeouts. | Engenharia Full-Stack |
+| [**Infraestrutura e Deploy Oracle OCI**](./INFRAESTRUTURA_ORACLE_OCI_DEPLOY.md) | Topologia de nuvem, Docker, Caddyfile, dimensionamento Ampere A1 e integrações Kan-sa / Hudson. | DevOps e Cloud |
 
 ---
 *Construído com ❤️ e Lógica pela Daisugi Tecnologias.*
+
