@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # Banco de Dados com Suporte Nativo a PgVector (Mente da Dai)
+  # -------------------------------------------------------------
+  postgres_vector:
+    image: pgvector/pgvector:pg16
+    container_name: dai_postgres_vector
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-memoria_vetorial}
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-masterkey123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-memoria_vetorial}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------
+  # Back-End FastAPI da Dai (Triagem, RAG Híbrido, Quarentena)
+  # -------------------------------------------------------------
+  dai_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dai_backend_api
+    restart: always
+    depends_on:
+      postgres_vector:
+        condition: service_healthy
+    environment:
+      - PORT=8001
+      - DB_HOST=postgres_vector
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-memoria_vetorial}
+      - DB_USER=${DB_USER:-admin}
+      - DB_PASSWORD=${DB_PASSWORD:-masterkey123}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - EMBED_MODEL=${EMBED_MODEL:-nomic-embed-text}
+    ports:
+      - "8001:8001"
+
+  # -------------------------------------------------------------
+  # Front-End Lobby da Dai (Streamlit Mobile-First)
+  # -------------------------------------------------------------
+  dai_lobby:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dai_frontend_lobby
+    restart: always
+    command: ["streamlit", "run", "app_chat_st.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    depends_on:
+      - dai_backend
+    environment:
+      - DAI_API_URL=http://dai_backend:8001
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+    ports:
+      - "8501:8501"
+
+volumes:
+  pgvector_data:
+    driver: local

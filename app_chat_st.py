@@ -131,13 +131,13 @@ st.markdown("""
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "http://localhost:8005"
 
 if not st.session_state.autenticado:
     # Mostramos o Avatar na portaria também para dar boas-vindas
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        logo_path = config.get("empresa", {}).get("logo", "Dai_Avatar.png")
+        logo_path = config.get("avatar", {}).get("imagem_login", "Dai_Avatar_Brand.jpg")
         if os.path.exists(logo_path):
             st.image(logo_path, width=150)
             
@@ -256,7 +256,7 @@ with tab_chat:
         st.session_state.messages = [{"role": "assistant", "content": msg_boas_vindas}]
 
     # Carrega a imagem via Base64 (Método à prova de falhas)
-    avatar_img = config.get("avatar", {}).get("imagem", "Dai_Avatar.png")
+    avatar_img = config.get("avatar", {}).get("imagem_lobby", "Dai_Avatar.png")
     avatar_emoji = config.get("avatar", {}).get("emoji", "👩🏻‍💼")
     icone_usuario = config.get("avatar", {}).get("icone_usuario", "👤")
     

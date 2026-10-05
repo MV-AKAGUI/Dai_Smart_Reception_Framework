@@ -25,7 +25,8 @@
     "dica_input_chat": "Descreva sua demanda para a Dai..."
   },
   "avatar": {
-    "imagem": "Dai_Avatar_Brand.jpg",
+    "imagem_login": "login_avatar.jpg",
+    "imagem_lobby": "lobby_avatar.jpg",
     "emoji": "👩🏻‍💼",
     "icone_usuario": "👤"
   }

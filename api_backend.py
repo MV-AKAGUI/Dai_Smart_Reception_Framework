@@ -1,13 +1,56 @@
-from fastapi import FastAPI, HTTPException
+import os
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 import psycopg2
-from langchain_ollama import OllamaEmbeddings
 from typing import Optional, Tuple, List, Dict
-import json
+import hashlib
+import time
 
-app = FastAPI(title="Dai Smart Reception API", description="API Enterprise Multi-Tenant para Triagem e Roteamento")
+app = FastAPI(
+    title="Dai Smart Reception API", 
+    description="API Enterprise Multi-Tenant para Triagem e Roteamento - Arquitetura Assíncrona & RAG Fuzzy",
+    version="1.1.0"
+)
 
-embedder = OllamaEmbeddings(model="nomic-embed-text")
+# CORS para aceitar conexões do Frontend Web / Mobile / Streamlit
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Inicialização de Embeddings com suporte a OLLAMA_HOST em nuvem
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+try:
+    from langchain_ollama import OllamaEmbeddings
+    embedder = OllamaEmbeddings(model=os.getenv("EMBED_MODEL", "nomic-embed-text"), base_url=OLLAMA_HOST)
+except Exception as e:
+    embedder = None
+    print(f"⚠️ Embedder Ollama inicializado em modo offline/degradado: {e}")
+
+security = HTTPBearer()
+
+# ==========================================
+# 0. SIMULAÇÃO DE INFRAESTRUTURA (REDIS & JWT)
+# ==========================================
+
+# Simula o banco em memória (Redis) para evitar bater no RAG (Chroma/PgVector) toda hora
+REDIS_CACHE_MOCK: Dict[str, dict] = {}
+
+# Middleware RBAC: Apenas tokens com payload {role: 'operator'} passam
+def verify_operator_role(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Middleware RBAC: Apenas tokens com payload {role: 'operator'} passam aqui."""
+    token = credentials.credentials
+    if token != "token_jwt_operador_secreto":
+        raise HTTPException(
+            status_code=403, 
+            detail="Privilege Escalation Detectado: Acesso negado. Token não possui a claim 'role: operator'."
+        )
+    return True
 
 # ==========================================
 # 1. MODELOS DE DADOS (PYDANTIC)
@@ -28,6 +71,7 @@ class LoginResponse(BaseModel):
     perfil: str
     salas_liberadas: List[Sala]
     clientes_acesso: List[str]
+    token_jwt: str  # Suporte a RBAC
 
 class TriageRequest(BaseModel):
     id_usuario: int
@@ -39,6 +83,7 @@ class TriageResponse(BaseModel):
     cliente_destino: Optional[str] = None
     resposta_dai: str
     laudo_final: str
+    cache_hit: bool = False
 
 class FeedbackRequest(BaseModel):
     texto_usuario: str
@@ -51,92 +96,42 @@ class FeedbackResponse(BaseModel):
     status: str
     mensagem: str
 
+class QuarentenaRequest(BaseModel):
+    hash_id_documento: str
+    aprovado: bool
+
 # ==========================================
-# 2. CONFIGURAÇÃO DE BANCO DE DADOS (MULTI-TENANT)
+# 2. CONFIGURAÇÃO DE BANCO DE DADOS
 # ==========================================
 def get_db_connection():
     return psycopg2.connect(
-        host="localhost",
-        port="5432",
-        database="memoria_vetorial",
-        user="admin",
-        password="masterkey123"
+        host=os.getenv("DB_HOST", "localhost"),
+        port=os.getenv("DB_PORT", "5432"),
+        database=os.getenv("DB_NAME", "memoria_vetorial"),
+        user=os.getenv("DB_USER", "admin"),
+        password=os.getenv("DB_PASSWORD", "masterkey123"),
+        connect_timeout=5
     )
 
 @app.on_event("startup")
 def setup_enterprise_database():
-    """Cria a estrutura Multi-Tenant e injeta dados iniciais caso não existam."""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         
-        # Tabelas Estruturais
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS clientes (
-                id VARCHAR(50) PRIMARY KEY,
-                nome TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                login VARCHAR(50) UNIQUE,
-                senha VARCHAR(50),
-                nome TEXT,
-                perfil TEXT
-            );
-            CREATE TABLE IF NOT EXISTS usuario_clientes (
-                id_usuario INT REFERENCES usuarios(id),
-                id_cliente VARCHAR(50) REFERENCES clientes(id),
-                PRIMARY KEY (id_usuario, id_cliente)
-            );
-            CREATE TABLE IF NOT EXISTS salas_dinamicas (
-                id SERIAL PRIMARY KEY,
-                id_cliente VARCHAR(50) REFERENCES clientes(id),
-                nome TEXT,
-                funcao TEXT,
-                cor TEXT
-            );
+            CREATE TABLE IF NOT EXISTS clientes (id VARCHAR(50) PRIMARY KEY, nome TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, login VARCHAR(50) UNIQUE, senha VARCHAR(50), nome TEXT, perfil TEXT);
+            CREATE TABLE IF NOT EXISTS usuario_clientes (id_usuario INT REFERENCES usuarios(id), id_cliente VARCHAR(50) REFERENCES clientes(id), PRIMARY KEY (id_usuario, id_cliente));
+            CREATE TABLE IF NOT EXISTS salas_dinamicas (id SERIAL PRIMARY KEY, id_cliente VARCHAR(50) REFERENCES clientes(id), nome TEXT, funcao TEXT, cor TEXT);
+            CREATE TABLE IF NOT EXISTS memoria_global_daisugi (id SERIAL PRIMARY KEY, texto_original TEXT, resolucao_contexto TEXT, embedding vector(768), destino TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
         """)
 
-        # Tabela Global de Aprendizado Coletivo (Anônima e Genérica)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS memoria_global_daisugi (
-                id SERIAL PRIMARY KEY,
-                texto_original TEXT,
-                resolucao_contexto TEXT,
-                embedding vector(768),
-                destino TEXT,
-                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-
-        # Criar tabelas físicas isoladas de memória por cliente (Isolamento 1B)
         clientes_iniciais = ['controladoria', 'juridico']
         for c in clientes_iniciais:
             cur.execute(f"INSERT INTO clientes (id, nome) VALUES ('{c}', '{c.capitalize()}') ON CONFLICT DO NOTHING;")
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS memoria_{c} (
-                    id SERIAL PRIMARY KEY,
-                    texto_original TEXT,
-                    resolucao_contexto TEXT,
-                    embedding vector(768),
-                    destino TEXT,
-                    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-
-        # Mock de dados na subida para simular a base configurada
-        cur.execute("INSERT INTO usuarios (login, senha, nome, perfil) VALUES ('maria', '123', 'Maria CEO', 'Diretoria Geral') ON CONFLICT DO NOTHING;")
-        cur.execute("INSERT INTO usuarios (login, senha, nome, perfil) VALUES ('joao', '123', 'João Contábil', 'Auditor') ON CONFLICT DO NOTHING;")
-        
-        # João só vê controladoria. Maria vê ambos.
-        cur.execute("INSERT INTO usuario_clientes (id_usuario, id_cliente) VALUES (1, 'controladoria') ON CONFLICT DO NOTHING;")
-        cur.execute("INSERT INTO usuario_clientes (id_usuario, id_cliente) VALUES (1, 'juridico') ON CONFLICT DO NOTHING;")
-        cur.execute("INSERT INTO usuario_clientes (id_usuario, id_cliente) VALUES (2, 'controladoria') ON CONFLICT DO NOTHING;")
-
-        # Inserindo salas dinâmicas
-        cur.execute("INSERT INTO salas_dinamicas (id_cliente, nome, funcao, cor) VALUES ('controladoria', 'Auditoria Fiscal', 'Revisão', 'info') ON CONFLICT DO NOTHING;")
-        cur.execute("INSERT INTO salas_dinamicas (id_cliente, nome, funcao, cor) VALUES ('juridico', 'Dr. Saul', 'Contratos Cíveis', 'warning') ON CONFLICT DO NOTHING;")
+            cur.execute(f"CREATE TABLE IF NOT EXISTS memoria_{c} (id SERIAL PRIMARY KEY, texto_original TEXT, resolucao_contexto TEXT, embedding vector(768), destino TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
 
         conn.commit()
         cur.close()
@@ -145,143 +140,155 @@ def setup_enterprise_database():
     except Exception as e:
         print(f"❌ Erro ao configurar banco de dados: {e}")
 
-
 # ==========================================
-# 3. ROTAS E LÓGICA DE NEGÓCIO
+# 3. ROTAS ASSÍNCRONAS E ROTEAMENTO DA DAI
 # ==========================================
 @app.post("/auth/login", response_model=LoginResponse)
 def login(request: LoginRequest):
-    """Autentica o usuário e busca suas permissões e salas dinâmicas (Item 2B e 3B)."""
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    cur.execute("SELECT id, nome, perfil FROM usuarios WHERE login = %s AND senha = %s", (request.usuario.lower(), request.senha))
-    user = cur.fetchone()
-    
-    if not user:
-        cur.close()
-        conn.close()
-        raise HTTPException(status_code=401, detail="Credenciais inválidas.")
-        
-    id_usuario, nome, perfil = user
-    
-    # Busca clientes permitidos para este usuário
-    cur.execute("SELECT id_cliente FROM usuario_clientes WHERE id_usuario = %s", (id_usuario,))
-    clientes = [row[0] for row in cur.fetchall()]
-    
-    if not clientes:
-        clientes = []
-        
-    # Busca as salas disponíveis baseadas nos clientes que ele tem acesso
-    salas = []
-    if clientes:
-        format_strings = ','.join(['%s'] * len(clientes))
-        cur.execute(f"SELECT nome, funcao, cor FROM salas_dinamicas WHERE id_cliente IN ({format_strings})", tuple(clientes))
-        for row in cur.fetchall():
-            salas.append(Sala(nome=row[0], funcao=row[1], cor=row[2]))
+    # Mock admin (Operator)
+    if request.usuario.lower() == 'admin' and request.senha == '123':
+        return LoginResponse(
+            autenticado=True, id_usuario=1, nome="Administrador Operador", perfil="admin",
+            salas_liberadas=[Sala(nome="Painel Quarentena", funcao="Validação de Risco", cor="#EF4444")], 
+            clientes_acesso=["1", "2"],
+            token_jwt="token_jwt_operador_secreto" # Gera token de Operador
+        )
+    # Mock cliente
+    elif request.usuario.lower() == 'cliente' and request.senha == '123':
+        return LoginResponse(
+            autenticado=True, id_usuario=3, nome="Cliente Teste", perfil="cliente",
+            salas_liberadas=[Sala(nome="Triagem Clínica", funcao="Análise de sintomas", cor="#10b981")], 
+            clientes_acesso=["1"],
+            token_jwt="token_jwt_cliente_comum" # Gera token de Cliente
+        )
 
-    cur.close()
-    conn.close()
-    
-    return LoginResponse(
-        autenticado=True,
-        id_usuario=id_usuario,
-        nome=nome,
-        perfil=perfil,
-        salas_liberadas=salas,
-        clientes_acesso=clientes
-    )
+    raise HTTPException(status_code=401, detail="Credenciais inválidas.")
 
 @app.post("/chat/triage", response_model=TriageResponse)
 def triage(request: TriageRequest):
-    """Roteamento simultâneo com Leveza Matemática (RAG) e Validação Fuzzy."""
+    """Triagem inteligente com proteção de Cache O(1) via Redis para evitar Gargalo no RAG."""
     prompt = request.texto_usuario.strip()
     
+    # 1. VERIFICAÇÃO DE CACHE (REDIS) - O(1)
+    # Se a mesma dor já foi validada, não consome banco de dados nem LLM.
+    hash_prompt = hashlib.md5(prompt.encode()).hexdigest()
+    if hash_prompt in REDIS_CACHE_MOCK:
+        print(f"⚡ [CACHE HIT] Resposta recuperada do Redis para o hash {hash_prompt}")
+        cache_data = REDIS_CACHE_MOCK[hash_prompt]
+        return TriageResponse(
+            status_fuzzy=False,
+            destino=cache_data["destino"],
+            cliente_destino=cache_data["cliente_destino"],
+            resposta_dai=f"⚡ (Via Cache) Encaminhando para **{cache_data['destino']}** em **{cache_data['cliente_destino']}**.",
+            laudo_final="✅ Triagem via Cache Redis O(1).",
+            cache_hit=True
+        )
+
+    # 2. SE NÃO ESTIVER NO CACHE, EXECUTA O RAG PESADO (PgVector)
     conn = get_db_connection()
     cur = conn.cursor()
-    
-    # 1. Descobrir quais tabelas o usuário pode acessar (Segurança/Isolamento)
     cur.execute("SELECT id_cliente FROM usuario_clientes WHERE id_usuario = %s", (request.id_usuario,))
     clientes = [row[0] for row in cur.fetchall()]
     
     if not clientes:
-        cur.close()
-        conn.close()
-        return TriageResponse(
-            status_fuzzy=True,
-            resposta_dai="Você não possui acesso a nenhum domínio ou cliente registrado.",
-            laudo_final="❌ Acesso Negado."
-        )
+        return TriageResponse(status_fuzzy=True, resposta_dai="Sem acesso.", laudo_final="❌ Acesso Negado.")
 
-    # 2. Busca Matemática RAG Híbrida (Simultânea via UNION ALL)
     vetor_busca = embedder.embed_query(prompt)
     vetor_str = f"[{','.join(map(str, vetor_busca))}]"
     
-    query_parts = []
-    
-    # 2.1 Adiciona a Memória Global de Aprendizado Coletivo
-    query_parts.append(f"(SELECT texto_original, destino, 'Global (Daisugi)' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_global_daisugi ORDER BY distancia ASC LIMIT 1)")
-
-    # 2.2 Adiciona as Memórias Isoladas do Cliente
+    query_parts = [f"(SELECT texto_original, destino, 'Global' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_global_daisugi ORDER BY distancia ASC LIMIT 1)"]
     for c in clientes:
-        part = f"(SELECT texto_original, destino, '{c}' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_{c} ORDER BY distancia ASC LIMIT 1)"
-        query_parts.append(part)
+        query_parts.append(f"(SELECT texto_original, destino, '{c}' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_{c} ORDER BY distancia ASC LIMIT 1)")
         
     full_query = " UNION ALL ".join(query_parts) + " ORDER BY distancia ASC LIMIT 1;"
     
     try:
         cur.execute(full_query)
         resultado = cur.fetchone()
-    except Exception as e:
-        resultado = None # Em caso de tabela vazia ou não existente
+    except Exception:
+        resultado = None
         conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
 
-    cur.close()
-    conn.close()
-    
     distancia = resultado[3] if resultado else 999.0
     
-    # 3. Lógica Fuzzy de 3 Perguntas (Leveza: Sem LLM se for ambíguo)
+    # 3. LÓGICA FUZZY + GRAVAÇÃO EM CACHE SE CERTEZA FOR ALTA
     if resultado and distancia < 0.3:
-        destino = resultado[1]
-        cliente_destino = resultado[2]
+        destino, cliente_destino = resultado[1], resultado[2]
+        
+        # Grava no Redis para as próximas chamadas
+        REDIS_CACHE_MOCK[hash_prompt] = {"destino": destino, "cliente_destino": cliente_destino}
+        
         return TriageResponse(
-            status_fuzzy=False,
-            destino=destino,
-            cliente_destino=cliente_destino,
-            resposta_dai=f"🔍 Suas métricas são claras. Encaminhando para a Sala **{destino}** do departamento de **{cliente_destino.capitalize()}**.",
-            laudo_final=f"✅ Triagem Concluída: Rota {destino} ({cliente_destino})."
+            status_fuzzy=False, destino=destino, cliente_destino=cliente_destino,
+            resposta_dai=f"🔍 Busca RAG concluída. Sala **{destino}** ({cliente_destino}).",
+            laudo_final=f"✅ Triagem Concluída.", cache_hit=False
         )
     else:
-        # Aciona o Protocolo Fuzzy Padrão A (Universal)
-        pergunta_refinamento = (
-            "Para que eu possa direcionar sua queixa com exatidão, preciso que refine seu pedido:\n"
-            "**(i) O QUE** você precisa resolver?\n"
-            "**(ii) COMO** espera que a equipe ajude?\n"
-            "**(iii) POR QUE** isso é uma prioridade agora?"
-        )
+        # Falso Fuzzy - Pede Refinamento
         return TriageResponse(
             status_fuzzy=True,
-            resposta_dai=pergunta_refinamento,
-            laudo_final="⚠️ Triagem Inconclusiva: A Dai acionou o modo Fuzzy solicitando clareza."
+            resposta_dai="Para que eu direcione corretamente:\n(i) O QUE você precisa?\n(ii) COMO podemos ajudar?\n(iii) POR QUE é prioridade?",
+            laudo_final="⚠️ Triagem Inconclusiva.", cache_hit=False
         )
 
+# ==========================================
+# 4. BACKGROUND TASKS E QUARENTENA (RBAC)
+# ==========================================
+
+def processar_auditoria_kansa_async(hash_id: str, aprovado: bool):
+    """Worker Assíncrono: Finge que está rodando uma auditoria pesada de horas."""
+    print(f"🚀 [BACKGROUND TASK] Iniciando auditoria do Kan-sa para Hash {hash_id}... Isso pode demorar.")
+    time.sleep(5) # Simula o delay sem travar o Event Loop do FastAPI
+    status = "APROVADO" if aprovado else "REJEITADO"
+    print(f"✅ [BACKGROUND TASK] Auditoria finalizada. Status: {status}. Hudson notificado via Webhook.")
+
+@app.post("/api/quarentena/validar")
+def validar_quarentena(
+    request: QuarentenaRequest, 
+    bg_tasks: BackgroundTasks, 
+    is_operator: bool = Depends(verify_operator_role)
+):
+    """
+    Rota BLINDADA. Apenas Tokens com Role: Operator acessam.
+    Usa BackgroundTasks para não deixar o App Mobile/Web pendurado (Hanging).
+    """
+    # Se chegou aqui, o middleware (verify_operator_role) já garantiu que é um operador.
+    
+    # Joga o processamento da Quarentena para a fila de background
+    bg_tasks.add_task(processar_auditoria_kansa_async, request.hash_id_documento, request.aprovado)
+    
+    # Devolve o status 202 IMEDIATAMENTE (Desacoplamento Temporal)
+    return {
+        "status_http": 202,
+        "message": "Solicitação aceita. O pacote JSON leve foi recebido e o Kan-sa assumiu a tarefa em segundo plano.",
+        "hash_processado": request.hash_id_documento
+    }
+
+# ==========================================
+# 5. RETROALIMENTAÇÃO & EVOLUÇÃO CONTÍNUA
+# ==========================================
 @app.post("/triage/learn", response_model=FeedbackResponse)
 def aprender_com_triagem(request: FeedbackRequest):
     """
     O Coração da Evolução da Dai.
     Quando o Especialista encerra o chamado e resolve o problema, 
     a interação (texto inicial + resolução do especialista) vira um novo lastro matemático.
-    Isso alimenta a tabela isolada do cliente, retroalimentando o RAG e garantindo automação total.
+    Isso alimenta a tabela isolada do cliente ou global, retroalimentando o RAG e garantindo automação total.
     """
-    # 1. Concatenar a dor inicial com a solução do especialista
+    if not embedder:
+        raise HTTPException(status_code=503, detail="Serviço de embedding indisponível para aprendizado.")
+
     texto_aprendizado = f"Queixa: {request.texto_usuario} | Resolução Prontuário: {request.resolucao_especialista}"
     
-    # 2. Converter o aprendizado em matemática pura
-    vetor_novo = embedder.embed_query(texto_aprendizado)
-    vetor_str = f"[{','.join(map(str, vetor_novo))}]"
+    try:
+        vetor_novo = embedder.embed_query(texto_aprendizado)
+        vetor_str = f"[{','.join(map(str, vetor_novo))}]"
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao vetorizar aprendizado: {str(e)}")
     
-    # 3. Injetar na memória correspondente (Global ou Isolada)
     tabela_alvo = "memoria_global_daisugi" if request.is_global else f"memoria_{request.cliente_destino}"
     
     conn = get_db_connection()
@@ -292,15 +299,32 @@ def aprender_com_triagem(request: FeedbackRequest):
             VALUES (%s, %s, %s, %s::vector)
         """, (request.texto_usuario, request.resolucao_especialista, request.destino_final, vetor_str))
         conn.commit()
-        status = "sucesso"
         tipo_memoria = "Global Coletiva" if request.is_global else f"Isolada ({request.cliente_destino})"
         msg = f"A Dai evoluiu. Nova trilha sináptica criada na Memória {tipo_memoria}."
+        status = "sucesso"
     except Exception as e:
+        conn.rollback()
         status = "erro"
         msg = str(e)
-        conn.rollback()
     finally:
         cur.close()
         conn.close()
         
     return FeedbackResponse(status=status, mensagem=msg)
+
+@app.get("/health")
+def healthcheck():
+    """Healthcheck probe para Docker, Caddy e Oracle OCI Load Balancer."""
+    return {
+        "status": "HEALTHY",
+        "sistema": "Dai Smart Reception API",
+        "embedder_ativo": embedder is not None,
+        "cache_redis_itens": len(REDIS_CACHE_MOCK),
+        "timestamp": time.time()
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    porta = int(os.getenv("PORT", "8001"))
+    uvicorn.run("api_backend.py:app", host="0.0.0.0", port=porta, reload=False)
+
