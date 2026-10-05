@@ -136,12 +136,18 @@ def setup_enterprise_database():
         cur.execute("""
             INSERT INTO usuarios (id, login, senha, nome, perfil) 
             VALUES (1, 'admin', '123', 'Administrador Operador', 'admin'),
-                   (3, 'cliente', '123', 'Cliente Teste', 'cliente')
+                   (3, 'cliente', '123', 'Cliente Teste', 'cliente'),
+                   (4, 'controller', '123', 'Controller Geral (Checker SoD)', 'admin'),
+                   (5, 'advogado', '123', 'Advogado Imobiliário', 'admin'),
+                   (6, 'engenheiro', '123', 'Engenheiro da Obra (Maker)', 'cliente'),
+                   (7, 'diretor', '123', 'Diretor Presidente', 'admin')
             ON CONFLICT (id) DO NOTHING;
         """)
         cur.execute("""
             INSERT INTO usuario_clientes (id_usuario, id_cliente)
-            VALUES (1, 'controladoria'), (1, 'juridico'), (3, 'controladoria')
+            VALUES (1, 'controladoria'), (1, 'juridico'), (3, 'controladoria'),
+                   (4, 'controladoria'), (4, 'juridico'), (5, 'juridico'),
+                   (6, 'controladoria'), (7, 'controladoria'), (7, 'juridico')
             ON CONFLICT (id_usuario, id_cliente) DO NOTHING;
         """)
 
@@ -157,21 +163,65 @@ def setup_enterprise_database():
 # ==========================================
 @app.post("/auth/login", response_model=LoginResponse)
 def login(request: LoginRequest):
-    # Mock admin (Operator)
-    if request.usuario.lower() == 'admin' and request.senha == '123':
+    u = request.usuario.lower()
+    s = request.senha
+
+    # Validação de credenciais de teste para Cadeiras PAM / IGA
+    if s != '123':
+        raise HTTPException(status_code=401, detail="Credenciais inválidas.")
+
+    if u == 'controller':
+        return LoginResponse(
+            autenticado=True, id_usuario=4, nome="Controller Geral (Checker Quarentena)", perfil="admin",
+            salas_liberadas=[
+                Sala(nome="Painel Quarentena", funcao="Auditoria de CCB e Risco", cor="#EF4444"),
+                Sala(nome="Governança de Travas ERP", funcao="Parametrização e SoD", cor="#3B82F6")
+            ],
+            clientes_acesso=["controladoria", "juridico"],
+            token_jwt="token_jwt_operador_secreto"
+        )
+    elif u == 'advogado':
+        return LoginResponse(
+            autenticado=True, id_usuario=5, nome="Advogado Imobiliário (Pareceres)", perfil="admin",
+            salas_liberadas=[
+                Sala(nome="Painel Quarentena", funcao="Análise de Minutas e Risco Legal", cor="#8B5CF6"),
+                Sala(nome="Sala Jurídica", funcao="Consultas Imobiliárias", cor="#6366F1")
+            ],
+            clientes_acesso=["juridico"],
+            token_jwt="token_jwt_operador_secreto"
+        )
+    elif u == 'engenheiro':
+        return LoginResponse(
+            autenticado=True, id_usuario=6, nome="Engenheiro da Obra (Maker Solicitante)", perfil="cliente",
+            salas_liberadas=[
+                Sala(nome="Medição e Obras", funcao="Acompanhamento Físico", cor="#10B981")
+            ],
+            clientes_acesso=["controladoria"],
+            token_jwt="token_jwt_cliente_comum"
+        )
+    elif u == 'diretor':
+        return LoginResponse(
+            autenticado=True, id_usuario=7, nome="Diretor Presidente (Super-Auditor)", perfil="admin",
+            salas_liberadas=[
+                Sala(nome="Painel Quarentena", funcao="Alçada Máxima", cor="#EF4444"),
+                Sala(nome="Diretoria & Métricas", funcao="Visão Geral Corporativa", cor="#00B4D8")
+            ],
+            clientes_acesso=["controladoria", "juridico"],
+            token_jwt="token_jwt_operador_secreto"
+        )
+    elif u == 'admin':
         return LoginResponse(
             autenticado=True, id_usuario=1, nome="Administrador Operador", perfil="admin",
             salas_liberadas=[Sala(nome="Painel Quarentena", funcao="Validação de Risco", cor="#EF4444")], 
             clientes_acesso=["controladoria", "juridico"],
-            token_jwt="token_jwt_operador_secreto" # Gera token de Operador
+            token_jwt="token_jwt_operador_secreto"
         )
-    # Mock cliente
-    elif request.usuario.lower() == 'cliente' and request.senha == '123':
+    elif u == 'cliente':
         return LoginResponse(
             autenticado=True, id_usuario=3, nome="Cliente Teste", perfil="cliente",
             salas_liberadas=[Sala(nome="Triagem Clínica", funcao="Análise de sintomas", cor="#10b981")], 
             clientes_acesso=["controladoria"],
-            token_jwt="token_jwt_cliente_comum" # Gera token de Cliente
+            token_jwt="token_jwt_cliente_comum"
         )
 
     raise HTTPException(status_code=401, detail="Credenciais inválidas.")

@@ -149,7 +149,7 @@ if not st.session_state.autenticado:
         st.markdown(f"{subtitulo_portaria}")
         
         with st.form("login_form"):
-            usuario = st.text_input("Usuário (Dica: admin, cliente)").lower()
+            usuario = st.text_input("Cadeira / Usuário PAM (Ex: controller, advogado, engenheiro, diretor, admin, cliente)").lower()
             senha = st.text_input("Senha (Dica: 123)", type="password")
             submit_btn = st.form_submit_button("Entrar no Lobby")
             
