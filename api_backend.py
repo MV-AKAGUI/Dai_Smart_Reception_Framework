@@ -133,6 +133,18 @@ def setup_enterprise_database():
             cur.execute(f"INSERT INTO clientes (id, nome) VALUES ('{c}', '{c.capitalize()}') ON CONFLICT DO NOTHING;")
             cur.execute(f"CREATE TABLE IF NOT EXISTS memoria_{c} (id SERIAL PRIMARY KEY, texto_original TEXT, resolucao_contexto TEXT, embedding vector(768), destino TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
 
+        cur.execute("""
+            INSERT INTO usuarios (id, login, senha, nome, perfil) 
+            VALUES (1, 'admin', '123', 'Administrador Operador', 'admin'),
+                   (3, 'cliente', '123', 'Cliente Teste', 'cliente')
+            ON CONFLICT (id) DO NOTHING;
+        """)
+        cur.execute("""
+            INSERT INTO usuario_clientes (id_usuario, id_cliente)
+            VALUES (1, 'controladoria'), (1, 'juridico'), (3, 'controladoria')
+            ON CONFLICT (id_usuario, id_cliente) DO NOTHING;
+        """)
+
         conn.commit()
         cur.close()
         conn.close()
@@ -150,7 +162,7 @@ def login(request: LoginRequest):
         return LoginResponse(
             autenticado=True, id_usuario=1, nome="Administrador Operador", perfil="admin",
             salas_liberadas=[Sala(nome="Painel Quarentena", funcao="Validação de Risco", cor="#EF4444")], 
-            clientes_acesso=["1", "2"],
+            clientes_acesso=["controladoria", "juridico"],
             token_jwt="token_jwt_operador_secreto" # Gera token de Operador
         )
     # Mock cliente
@@ -158,7 +170,7 @@ def login(request: LoginRequest):
         return LoginResponse(
             autenticado=True, id_usuario=3, nome="Cliente Teste", perfil="cliente",
             salas_liberadas=[Sala(nome="Triagem Clínica", funcao="Análise de sintomas", cor="#10b981")], 
-            clientes_acesso=["1"],
+            clientes_acesso=["controladoria"],
             token_jwt="token_jwt_cliente_comum" # Gera token de Cliente
         )
 
@@ -193,7 +205,15 @@ def triage(request: TriageRequest):
     if not clientes:
         return TriageResponse(status_fuzzy=True, resposta_dai="Sem acesso.", laudo_final="❌ Acesso Negado.")
 
-    vetor_busca = embedder.embed_query(prompt)
+    try:
+        if embedder:
+            vetor_busca = embedder.embed_query(prompt)
+        else:
+            vetor_busca = [0.0] * 768
+    except Exception as e:
+        print(f"⚠️ Embedder Ollama indisponível: {e}")
+        vetor_busca = [0.0] * 768
+
     vetor_str = f"[{','.join(map(str, vetor_busca))}]"
     
     query_parts = [f"(SELECT texto_original, destino, 'Global' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_global_daisugi ORDER BY distancia ASC LIMIT 1)"]
