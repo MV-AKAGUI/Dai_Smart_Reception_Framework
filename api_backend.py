@@ -326,5 +326,5 @@ def healthcheck():
 if __name__ == "__main__":
     import uvicorn
     porta = int(os.getenv("PORT", "8001"))
-    uvicorn.run("api_backend.py:app", host="0.0.0.0", port=porta, reload=False)
+    uvicorn.run("api_backend:app", host="0.0.0.0", port=porta, reload=False)
 

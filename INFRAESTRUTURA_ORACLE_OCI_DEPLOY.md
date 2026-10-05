@@ -230,4 +230,130 @@ sudo docker compose ps
 sudo docker compose logs -f api_backend
 ```
 
-Pronto! A Dai e o Kan-sa passam a rodar ancorados na nuvem da Oracle, sem consumir bateria, RAM ou conexão da sua máquina física, com proteção de reinício automático (`restart: always`), banco isolado e conexão segura via HTTPS.
+---
+
+## 7. Configuração do Ambiente de Produção (Instalação do Docker e Caddy)
+
+Para provisionar novas instâncias OCI ou documentar o ambiente do zero:
+
+### 7.1 Instalação do Docker Engine e Docker Compose Plugin (Ubuntu 24.04 LTS)
+```bash
+# Atualizar repositórios e instalar pré-requisitos
+sudo apt update && sudo apt install -y ca-certificates curl gnupg lsb-release
+
+# Adicionar chave GPG oficial do Docker
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Configurar o repositório estável
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Instalar Docker Engine, CLI, Containerd e Docker Compose
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Permitir execução sem sudo (opcional) e habilitar no boot
+sudo usermod -aG docker ubuntu
+sudo systemctl enable docker
+sudo systemctl start docker
+```
+
+### 7.2 Instalação e Arquitetura do Caddy Gateway
+O Caddy é operado através de um container Docker isolado em `/opt/daisugi/docker-compose.yml` utilizando `network_mode: host`:
+```yaml
+services:
+  daisugi-gateway:
+    image: caddy:2-alpine
+    container_name: daisugi-gateway
+    restart: always
+    network_mode: host
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  caddy_data:
+  caddy_config:
+```
+Para recarregar alterações de rotas sem derrubar o tráfego:
+```bash
+sudo docker exec daisugi-gateway caddy reload --config /etc/caddy/Caddyfile
+```
+
+---
+
+## 8. Blindagem de Segurança do Servidor (Firewall, Isolamento e Autenticação)
+
+### 8.1 Regras de Ingress na OCI VCN (Security Lists)
+No console da Oracle Cloud Infrastructure (`Networking` > `Virtual Cloud Networks` > `Security Lists`):
+- **Porta 22 (SSH)**: Permitir apenas com chave SSH (Desabilitar `PasswordAuthentication` em `/etc/ssh/sshd_config`).
+- **Portas 80 (HTTP) e 443 (HTTPS)**: Liberadas publicamente `0.0.0.0/0` para o Caddy Gateway.
+- **Portas 5432 (Postgres), 8000/8001 (APIs), 8501 (Streamlit)**: **BLOQUEADAS** na Security List externa. Apenas o Caddy local e a rede Docker interna podem se comunicar com essas portas.
+
+### 8.2 Configuração de Firewall Interno no Host (`iptables` / `netfilter-persistent`)
+O Ubuntu na OCI vem com regras restritivas pré-definidas em `iptables`. As portas 80 e 443 devem ser inseridas antes da regra de drop:
+```bash
+# Liberar HTTP e HTTPS
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+
+# Persistir as regras após reinicializações
+sudo apt install -y iptables-persistent netfilter-persistent
+sudo netfilter-persistent save
+```
+
+### 8.3 Isolamento de Rede Docker
+No arquivo `docker-compose.yml`, as portas do banco e dos microserviços podem ser vinculadas exclusivamente à interface de loopback (`127.0.0.1:8001:8001` e `127.0.0.1:8501:8501`), impedindo que varreduras externas acessem os serviços sem passar pelo TLS do Caddy.
+
+### 8.4 Autenticação em Camadas (Defense in Depth)
+1. **Frontend / Lobby**: Autenticação via formulário com geração de Token JWT de sessão assinado.
+2. **API Backend**: Middleware RBAC com validação estrita de Bearer Token em endpoints administrativos (`/api/quarentena/validar`), bloqueando escalada de privilégios com HTTP 403.
+3. **Comunicação Inter-serviços**: Segredos de integração (ex: tokens de webhook) injetados via variáveis de ambiente seguras no arquivo `.env`.
+
+---
+
+## 9. Manutenção Contínua, Rotina de Backup e Atualizações Zero-Downtime
+
+### 9.1 Rotina de Backup Automatizado do pgvector (Memória da Dai)
+Para garantir que as sinapses vetoriais e tabelas multi-tenant não sejam perdidas, configure um cronjob diário:
+```bash
+# Criar diretório de backups
+sudo mkdir -p /opt/daisugi/backups
+
+# Script de backup (/opt/daisugi/backup_pgvector.sh)
+cat << 'EOF' | sudo tee /opt/daisugi/backup_pgvector.sh
+#!/bin/bash
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+BACKUP_DIR="/opt/daisugi/backups"
+sudo docker exec dai_postgres_vector pg_dump -U admin memoria_vetorial | gzip > "$BACKUP_DIR/dai_memoria_$TIMESTAMP.sql.gz"
+# Reter apenas os últimos 15 dias de backup
+find "$BACKUP_DIR" -name "dai_memoria_*.sql.gz" -mtime +15 -delete
+EOF
+
+sudo chmod +x /opt/daisugi/backup_pgvector.sh
+
+# Adicionar ao crontab para rodar às 03:00 da manhã
+(crontab -l 2>/dev/null; echo "0 3 * * * /opt/daisugi/backup_pgvector.sh") | crontab -
+```
+
+### 9.2 Procedimento de Atualização Zero-Downtime
+Quando houver novas versões no GitHub:
+```bash
+cd /opt/daisugi/dai
+# 1. Puxar alterações do repositório
+sudo git pull origin main
+
+# 2. Reconstruir a imagem e recriar os containers sem derrubar o banco
+sudo docker compose up -d --build --no-deps dai_backend dai_lobby
+
+# 3. Limpar imagens antigas para economizar espaço em disco
+sudo docker image prune -f
+```
+
+### 9.3 Monitoramento de Saúde e Telemetria
+- **Verificar consumo de RAM e Swap**: `free -h`
+- **Verificar uso de CPU e memória por container**: `sudo docker stats --no-stream`
+- **Healthcheck do Backend da Dai**: `curl -f http://localhost:8001/health`
+- **Verificar logs em tempo real**: `sudo docker compose logs -f --tail=100 dai_backend`
+
