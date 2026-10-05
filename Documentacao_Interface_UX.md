@@ -52,5 +52,27 @@ A UX por trás do balcão segue o princípio da **Fricção Mínima**:
 4. Assim que o usuário responde, a certeza matemática aumenta e o roteamento é feito.
 
 ---
-## 🎨 5. Personalização Visual
-A cor Primária e Secundária, o Avatar e o Emoji podem ser alterados em tempo real alterando o arquivo `config_cliente.json`. Recomendamos o uso de paletas suaves (ex: Azuis para passar confiança, Verdes para estabilidade) para garantir conforto visual no Lobby.
+
+## 5. 🛡️ Os 6 Pilares de Blindagem Técnica no Front-End
+
+Para garantir que a segurança da Dai não se perca na camada visual, o Front-End implementa:
+
+1. **Isolamento Concorrente de Sessão (`st.session_state`):**  
+   Cada aba de navegador opera em escopo de memória estritamente segregado. O usuário A nunca acessa a sessão ou o histórico do usuário B.
+2. **Zero-Trust UI (Ocultação Física no DOM):**  
+   Painéis restritos (como a Quarentena de Operador) só são renderizados se `st.session_state.paciente_perfil == "admin"`. Usuários comuns não possuem esses elementos gerados no HTML/DOM.
+3. **Armazenamento de Tokens em Memória Volátil:**  
+   O Bearer Token JWT fica em memória RAM de sessão, eliminando vulnerabilidades de roubo em `localStorage` ou cookies desprotegidos.
+4. **Sanitização contra XSS:**  
+   Uso de Markdown estrito e inputs tipados, impedindo injeção de scripts arbitrários.
+5. **Badge Dinâmico de Liveness da API (`/health`):**  
+   Indicador no topo da barra lateral (`🟢 API Dai Conectada` / `🔴 API Desconectada`) dando certeza imediata da comunicação com a nuvem Oracle.
+6. **Timeouts Estritos de Rede (5 segundos):**  
+   Todas as chamadas REST ao backend abortam em 5 segundos com mensagens amigáveis caso a rede oscile, sem travar a interface do usuário (*zero hanging requests*).
+
+---
+
+## 6. 🎨 Personalização Visual e Tematização
+
+A cor Primária e Secundária, o Avatar e o Emoji podem ser alterados em tempo real no arquivo `config_cliente.json`. O framework já vem pré-configurado no tema corporativo **DAISUGI Dark Mode** (`#0B192C` com glassmorphism translúcido `rgba(15, 23, 42, 0.7)` e toques de verde esmeralda `#10b981`), garantindo ergonomia e alto padrão visual em qualquer dispositivo.
+

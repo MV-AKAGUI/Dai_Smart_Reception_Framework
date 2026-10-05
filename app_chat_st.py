@@ -183,8 +183,24 @@ if not st.session_state.autenticado:
 # 3. INTERFACE DA CLÍNICA
 # ==========================================
 
-# Botão de Logout no topo da barra lateral
+# Verificação de Saúde da API para feedback visual na Barra Lateral
+def checar_status_api(url: str):
+    try:
+        r = requests.get(f"{url}/health", timeout=2)
+        if r.status_code == 200:
+            return True, r.json()
+    except Exception:
+        pass
+    return False, {}
+
+# Barra Lateral: Identidade, Perfil e Status do Sistema
 with st.sidebar:
+    api_online, health_data = checar_status_api(API_BASE_URL)
+    if api_online:
+        st.success("🟢 **API Dai:** Conectada")
+    else:
+        st.error("🔴 **API Dai:** Desconectada")
+
     termo_usuario = config.get("textos", {}).get("termo_usuario_logado", "Usuário Logado")
     termo_perfil = config.get("textos", {}).get("termo_perfil_acesso", "Perfil de Acesso")
     st.markdown(f"👤 **{termo_usuario}:** {st.session_state.paciente_nome}")
@@ -193,10 +209,74 @@ with st.sidebar:
         st.session_state.autenticado = False
         st.rerun()
 
-# Mobile-First: Substituição de Colunas (que empilham mal no celular) por Abas (Tabs) interativas
+# Mobile-First: Substituição de Colunas por Abas (Tabs) interativas
 tab_chat, tab_salas, tab_ficha = st.tabs(["💬 Lobby (Recepção)", "🚪 Salas e Corredores", "📋 Seu Contexto (Ticket/Laudo)"])
 
 # ----------------------------------------------------
+# TAB 1: A RECEPÇÃO (CHAT DA DAI)
+# ----------------------------------------------------
+with tab_chat:
+    titulo_chat = config.get("textos", {}).get("titulo_chat", "台 Dai - Triagem e Roteamento")
+    subtitulo_chat = config.get("textos", {}).get("subtitulo_chat", "*A Recepção Inteligente baseada em Equilibrio, Memória e Sentido.*")
+    cor_primaria = config.get("tema", {}).get("cor_primaria", "#00B4D8")
+    cor_secundaria = config.get("tema", {}).get("cor_secundaria", "#00A86B")
+    
+    st.markdown(f"<h3 style='color: {cor_primaria};'>{titulo_chat}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color: {cor_secundaria};'>{subtitulo_chat}</span>", unsafe_allow_html=True)
+
+    msg_boas_vindas = config.get("textos", {}).get("mensagem_boas_vindas", "Olá, sou a Dai. O que te trouxe até aqui? Como posso te ajudar?")
+    if "messages" not in st.session_state or st.session_state.messages[0]["content"] != msg_boas_vindas:
+        st.session_state.messages = [{"role": "assistant", "content": msg_boas_vindas}]
+
+    # Carrega o avatar via Base64
+    avatar_img = config.get("avatar", {}).get("imagem_lobby", "Dai_Avatar.png")
+    avatar_emoji = config.get("avatar", {}).get("emoji", "👩🏻‍💼")
+    icone_usuario = config.get("avatar", {}).get("icone_usuario", "👤")
+    
+    if os.path.exists(avatar_img):
+        dai_avatar = get_base64_image(avatar_img)
+    else:
+        dai_avatar = avatar_emoji
+
+    # Renderiza o histórico de mensagens
+    for message in st.session_state.messages:
+        avatar = dai_avatar if message["role"] == "assistant" else icone_usuario
+        with st.chat_message(message["role"], avatar=avatar):
+            st.markdown(message["content"])
+
+    # Input do usuário
+    dica_input = config.get("textos", {}).get("dica_input_chat", "Diga sua queixa à Dai...")
+    if prompt := st.chat_input(dica_input):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.session_state.ultima_queixa = prompt
+        with st.chat_message("user", avatar=icone_usuario):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant", avatar=dai_avatar):
+            try:
+                res = requests.post(f"{API_BASE_URL}/chat/triage", json={
+                    "texto_usuario": prompt,
+                    "id_usuario": st.session_state.get("paciente_id", 1)
+                }, timeout=5)
+                if res.status_code == 200:
+                    dados = res.json()
+                    st.session_state.laudo_final = dados["laudo_final"]
+                    
+                    texto_resposta = dados["resposta_dai"]
+                    if dados.get("cache_hit"):
+                        texto_resposta = f"⚡ **[Cache Redis O(1) Hit]**\n\n{texto_resposta}"
+                    
+                    if dados.get("destino"):
+                        st.session_state.ultimo_destino = dados["destino"]
+
+                    st.markdown(texto_resposta)
+                    st.session_state.messages.append({"role": "assistant", "content": texto_resposta})
+                    st.rerun()
+                else:
+                    st.error("❌ Erro interno na Mente Vetorial da Dai.")
+            except requests.exceptions.ConnectionError:
+                st.error(f"❌ Conexão perdida com o Backend da Dai em {API_BASE_URL}.")
+
 # ----------------------------------------------------
 # TAB 2: O CORREDOR E SALAS
 # ----------------------------------------------------
@@ -204,9 +284,7 @@ with tab_salas:
     titulo_corredor = config.get("textos", {}).get("titulo_corredor", "Corredor de")
     st.markdown(f"### 🚪 {titulo_corredor} {st.session_state.paciente_perfil}")
     
-    # Renderiza as portas dependendo das salas liberadas para o usuário (Multi-Tenant Dinâmico)
     col_s1, col_s2 = st.columns(2)
-    
     salas = st.session_state.get("salas_liberadas", [])
     
     if not salas:
@@ -254,7 +332,6 @@ with tab_salas:
 # TAB 3: FICHA E LAUDO FINAL
 # ----------------------------------------------------
 with tab_ficha:
-    # FICHA DO PACIENTE / TICKET
     titulo_ficha = config.get("textos", {}).get("titulo_ficha", "Contexto do Usuário (Ticket)")
     label_historico = config.get("textos", {}).get("label_historico", "Histórico de Interações e Demandas Anteriores:")
     valor_historico_padrao = config.get("textos", {}).get("valor_historico_padrao", "Nenhuma demanda pendente registrada.\n\nAguardando triagem no Lobby...")
@@ -264,7 +341,6 @@ with tab_ficha:
     
     st.markdown("---")
     
-    # RESULTADO / LAUDO FINAL
     titulo_laudo = config.get("textos", {}).get("titulo_laudo", "Laudo de Triagem / Roteamento")
     st.markdown(f"### 💊 {titulo_laudo}")
     
@@ -307,70 +383,4 @@ with tab_ficha:
                         st.error(f"❌ Erro ao salvar aprendizado: {res_learn.text}")
                 except Exception as e:
                     st.error(f"❌ Falha de conexão: {e}")
-
-# ----------------------------------------------------
-# TAB 1: A RECEPÇÃO (CHAT DA DAI) - Fica por último no código, mas na primeira Aba
-# ----------------------------------------------------
-with tab_chat:
-    titulo_chat = config.get("textos", {}).get("titulo_chat", "台 Dai - Triagem e Roteamento")
-    subtitulo_chat = config.get("textos", {}).get("subtitulo_chat", "*A Recepção Inteligente baseada em Equilibrio, Memória e Sentido.*")
-    cor_primaria = config.get("tema", {}).get("cor_primaria", "#00B4D8")
-    cor_secundaria = config.get("tema", {}).get("cor_secundaria", "#00A86B")
-    
-    st.markdown(f"<h3 style='color: {cor_primaria};'>{titulo_chat}</h3>", unsafe_allow_html=True)
-    st.markdown(f"<span style='color: {cor_secundaria};'>{subtitulo_chat}</span>", unsafe_allow_html=True)
-
-    msg_boas_vindas = config.get("textos", {}).get("mensagem_boas_vindas", "Olá, sou a Dai. O que te trouxe até aqui? Como posso te ajudar?")
-    if "messages" not in st.session_state or st.session_state.messages[0]["content"] != msg_boas_vindas:
-        st.session_state.messages = [{"role": "assistant", "content": msg_boas_vindas}]
-
-    # Carrega a imagem via Base64
-    avatar_img = config.get("avatar", {}).get("imagem_lobby", "Dai_Avatar.png")
-    avatar_emoji = config.get("avatar", {}).get("emoji", "👩🏻‍💼")
-    icone_usuario = config.get("avatar", {}).get("icone_usuario", "👤")
-    
-    if os.path.exists(avatar_img):
-        dai_avatar = get_base64_image(avatar_img)
-    else:
-        dai_avatar = avatar_emoji
-
-    # Renderiza o histórico
-    for message in st.session_state.messages:
-        avatar = dai_avatar if message["role"] == "assistant" else icone_usuario
-        with st.chat_message(message["role"], avatar=avatar):
-            st.markdown(message["content"])
-
-    # Input do usuário
-    dica_input = config.get("textos", {}).get("dica_input_chat", "Diga sua queixa à Dai...")
-    if prompt := st.chat_input(dica_input):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.ultima_queixa = prompt
-        with st.chat_message("user", avatar=icone_usuario):
-            st.markdown(prompt)
-
-        with st.chat_message("assistant", avatar=dai_avatar):
-            try:
-                # Chama a API de Triagem
-                res = requests.post(f"{API_BASE_URL}/chat/triage", json={
-                    "texto_usuario": prompt,
-                    "id_usuario": st.session_state.get("paciente_id", 1)
-                }, timeout=5)
-                if res.status_code == 200:
-                    dados = res.json()
-                    st.session_state.laudo_final = dados["laudo_final"]
-                    
-                    texto_resposta = dados["resposta_dai"]
-                    if dados.get("cache_hit"):
-                        texto_resposta = f"⚡ **[Cache Redis O(1) Hit]**\n\n{texto_resposta}"
-                    
-                    if dados.get("destino"):
-                        st.session_state.ultimo_destino = dados["destino"]
-
-                    st.markdown(texto_resposta)
-                    st.session_state.messages.append({"role": "assistant", "content": texto_resposta})
-                    st.rerun()
-                else:
-                    st.error("❌ Erro interno na Mente Vetorial da Dai.")
-            except requests.exceptions.ConnectionError:
-                st.error(f"❌ Conexão perdida com o Backend da Dai em {API_BASE_URL}.")
 
