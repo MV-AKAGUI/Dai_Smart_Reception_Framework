@@ -149,7 +149,7 @@ if not st.session_state.autenticado:
         st.markdown(f"{subtitulo_portaria}")
         
         with st.form("login_form"):
-            usuario = st.text_input("Cadeira / Usuário PAM (Ex: controller, advogado, engenheiro, diretor, admin, cliente)").lower()
+            usuario = st.text_input("Cadeira / Usuário PAM (Ex: controller, advogado, engenheiro, diretor, admin, cliente ou dev: montanhavermelha@akagui.com)").lower()
             senha = st.text_input("Senha (Dica: 123)", type="password")
             submit_btn = st.form_submit_button("Entrar no Lobby")
             
@@ -298,15 +298,16 @@ with tab_salas:
                 funcao_sala = sala.get('funcao', '') if isinstance(sala, dict) else ''
                 cores[i % len(cores)](f"🚪 **{nome_sala}**\n\n_{funcao_sala}_\n\n`🟢 Online`")
 
-    # Módulo Especial de Quarentena para Operadores / Admin (Integração Kan-sa)
-    if st.session_state.paciente_perfil == "admin":
+    # Módulo Especial de Quarentena para Operadores / Admin / Core Developer (Integração Kan-sa)
+    if st.session_state.paciente_perfil in ["admin", "core_developer"]:
         st.markdown("---")
         st.markdown("### 🛡️ Painel de Quarentena & Desacoplamento Assíncrono (Kan-sa / Hudson)")
-        st.caption("Acesso restrito: Validação de documentos em lote sem travamento de tela (HTTP 202 Accepted).")
+        st.caption("Acesso restrito: Validação de documentos em lote com segregação SoD (HTTP 202 Accepted).")
         
         with st.form("quarentena_form"):
             hash_doc = st.text_input("Hash SHA-256 do Documento / CCB", value="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-            decisao = st.selectbox("Parecer do Operador", ["Aprovar e Liberar para Kan-sa", "Rejeitar Documento"])
+            maker_id = st.text_input("Identidade do Solicitante / Criador da Demanda (Maker)", value="engenheiro.obra@sugoisa.com.br")
+            decisao = st.selectbox("Parecer do Validador (Checker)", ["Aprovar e Liberar para Kan-sa", "Rejeitar Documento"])
             submit_quarentena = st.form_submit_button("Despachar Auditoria em Background")
             
             if submit_quarentena:
@@ -316,17 +317,40 @@ with tab_salas:
                     res = requests.post(
                         f"{API_BASE_URL}/api/quarentena/validar",
                         headers=headers,
-                        json={"hash_id_documento": hash_doc, "aprovado": aprovado_bool},
+                        json={
+                            "hash_id_documento": hash_doc,
+                            "aprovado": aprovado_bool,
+                            "maker_identity": maker_id
+                        },
                         timeout=5
                     )
                     if res.status_code == 202:
                         retorno = res.json()
                         st.success(f"✅ **HTTP 202 Accepted**: {retorno.get('message')}")
-                        st.info(f"🆔 **Hash em processamento:** `{retorno.get('hash_processado')}`")
+                        st.info(f"🆔 **Hash em processamento:** `{retorno.get('hash_processado')}` | **Validador:** `{retorno.get('validador_sub')}`")
+                    elif res.status_code == 403:
+                        st.error(f"🛑 **403 Forbidden (Violação SoD / Privilege Escalation):** {res.json().get('detail')}")
                     else:
                         st.error(f"❌ Erro {res.status_code}: {res.text}")
                 except Exception as e:
                     st.error(f"❌ Falha de comunicação com a API: {e}")
+
+    # Painel Exclusivo de Soberania de Código para Desenvolvedores Core Akagui
+    if st.session_state.paciente_perfil == "core_developer":
+        st.markdown("---")
+        st.markdown("### 👑 Soberania de Código & Governança Central (Akagui Core)")
+        st.caption("Acesso reservado exclusivamente aos desenvolvedores da plataforma Daisugi.")
+        if st.button("Consultar Cofre Central PAM-IGA (`/api/admin/core-governance`)"):
+            headers = {"Authorization": f"Bearer {st.session_state.get('token_jwt', '')}"}
+            try:
+                r_gov = requests.get(f"{API_BASE_URL}/api/admin/core-governance", headers=headers, timeout=5)
+                if r_gov.status_code == 200:
+                    st.success("🔒 Conexão Autenticada com o Cofre Central PAM-IGA!")
+                    st.json(r_gov.json())
+                else:
+                    st.error(f"Erro {r_gov.status_code}: {r_gov.text}")
+            except Exception as e:
+                st.error(f"Falha de conexão com a governança: {e}")
 
 # ----------------------------------------------------
 # TAB 3: FICHA E LAUDO FINAL

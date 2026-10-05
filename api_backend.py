@@ -177,8 +177,12 @@ def login(request: LoginRequest):
         return LoginResponse(
             autenticado=True, id_usuario=99, nome="Desenvolvedor Soberano Daisugi (Core)", perfil="core_developer",
             salas_liberadas=[
-                Sala(nome="Soberania de Código Core", funcao="Acesso Mestre", cor="#8B5CF6"),
-                Sala(nome="Painel Quarentena", funcao="Auditoria Total", cor="#EF4444")
+                Sala(nome="Soberania de Código Core", funcao="Acesso Mestre Akagui", cor="#8B5CF6"),
+                Sala(nome="Painel Quarentena", funcao="Auditoria Total Kan-sa", cor="#EF4444"),
+                Sala(nome="Consultório Dr. Qwen Coder", funcao="Engenharia de Software & Python 3.11", cor="#3B82F6"),
+                Sala(nome="Consultório Dr. DeepSeek-R1", funcao="Processos BPMN, POPs e ITs", cor="#10B981"),
+                Sala(nome="Consultório Dra. Fiscal", funcao="ICMS, PIS/COFINS, SPED e Reforma", cor="#F59E0B"),
+                Sala(nome="Consultório Dr. Precedente", funcao="Jurisprudência & Precedentes STF/STJ", cor="#8B5CF6")
             ],
             clientes_acesso=["controladoria", "juridico"],
             token_jwt=dev_token
@@ -225,14 +229,24 @@ def login(request: LoginRequest):
     elif u == 'admin':
         return LoginResponse(
             autenticado=True, id_usuario=1, nome="Administrador Operador", perfil="admin",
-            salas_liberadas=[Sala(nome="Painel Quarentena", funcao="Validação de Risco", cor="#EF4444")], 
+            salas_liberadas=[
+                Sala(nome="Painel Quarentena", funcao="Validação de Risco", cor="#EF4444"),
+                Sala(nome="Consultório Dr. Qwen Coder", funcao="Engenharia de Software & Python 3.11", cor="#3B82F6"),
+                Sala(nome="Consultório Dr. DeepSeek-R1", funcao="Processos BPMN, POPs e ITs", cor="#10B981"),
+                Sala(nome="Consultório Dra. Fiscal", funcao="ICMS, PIS/COFINS, SPED e Reforma", cor="#F59E0B"),
+                Sala(nome="Consultório Dr. Precedente", funcao="Jurisprudência & Precedentes STF/STJ", cor="#8B5CF6")
+            ], 
             clientes_acesso=["controladoria", "juridico"],
             token_jwt="token_jwt_operador_secreto"
         )
     elif u == 'cliente':
         return LoginResponse(
             autenticado=True, id_usuario=3, nome="Cliente Teste", perfil="cliente",
-            salas_liberadas=[Sala(nome="Triagem Clínica", funcao="Análise de sintomas", cor="#10b981")], 
+            salas_liberadas=[
+                Sala(nome="Triagem Clínica", funcao="Análise de sintomas", cor="#10B981"),
+                Sala(nome="Consultório Dr. Qwen Coder", funcao="Suporte Técnico & Python", cor="#3B82F6"),
+                Sala(nome="Consultório Dr. DeepSeek-R1", funcao="Consultas de Processos & POPs", cor="#10B981")
+            ], 
             clientes_acesso=["controladoria"],
             token_jwt="token_jwt_cliente_comum"
         )
