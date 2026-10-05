@@ -4,9 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 import psycopg2
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict, Any
 import hashlib
 import time
+from daisugi_auth_guard import auth_guard, CORE_DEVELOPERS
 
 app = FastAPI(
     title="Dai Smart Reception API", 
@@ -41,16 +42,10 @@ security = HTTPBearer()
 # Simula o banco em memória (Redis) para evitar bater no RAG (Chroma/PgVector) toda hora
 REDIS_CACHE_MOCK: Dict[str, dict] = {}
 
-# Middleware RBAC: Apenas tokens com payload {role: 'operator'} passam
-def verify_operator_role(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Middleware RBAC: Apenas tokens com payload {role: 'operator'} passam aqui."""
-    token = credentials.credentials
-    if token != "token_jwt_operador_secreto":
-        raise HTTPException(
-            status_code=403, 
-            detail="Privilege Escalation Detectado: Acesso negado. Token não possui a claim 'role: operator'."
-        )
-    return True
+# Middleware RBAC & SoD integrado ao Daisugi_Ecosystem_Cofre-PAM-IGA
+def verify_operator_role(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
+    """Middleware RBAC & SoD: Valida se o Token possui alçada de Validador/Checker no Cofre PAM/IGA."""
+    return auth_guard.require_checker(credentials)
 
 # ==========================================
 # 1. MODELOS DE DADOS (PYDANTIC)
@@ -99,6 +94,7 @@ class FeedbackResponse(BaseModel):
 class QuarentenaRequest(BaseModel):
     hash_id_documento: str
     aprovado: bool
+    maker_identity: Optional[str] = None
 
 # ==========================================
 # 2. CONFIGURAÇÃO DE BANCO DE DADOS
@@ -170,7 +166,24 @@ def login(request: LoginRequest):
     if s != '123':
         raise HTTPException(status_code=401, detail="Credenciais inválidas.")
 
-    if u == 'controller':
+    if u in [dev.lower() for dev in CORE_DEVELOPERS]:
+        dev_token = auth_guard.generate_token({
+            "sub": u,
+            "role": "core_developer",
+            "is_core_developer": True,
+            "cadeira_principal": "Core Platform Developer",
+            "salas_liberadas": ["Painel Quarentena", "Governança de Travas ERP", "Soberania de Código Core"]
+        })
+        return LoginResponse(
+            autenticado=True, id_usuario=99, nome="Desenvolvedor Soberano Daisugi (Core)", perfil="core_developer",
+            salas_liberadas=[
+                Sala(nome="Soberania de Código Core", funcao="Acesso Mestre", cor="#8B5CF6"),
+                Sala(nome="Painel Quarentena", funcao="Auditoria Total", cor="#EF4444")
+            ],
+            clientes_acesso=["controladoria", "juridico"],
+            token_jwt=dev_token
+        )
+    elif u == 'controller':
         return LoginResponse(
             autenticado=True, id_usuario=4, nome="Controller Geral (Checker Quarentena)", perfil="admin",
             salas_liberadas=[
@@ -247,40 +260,42 @@ def triage(request: TriageRequest):
         )
 
     # 2. SE NÃO ESTIVER NO CACHE, EXECUTA O RAG PESADO (PgVector)
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id_cliente FROM usuario_clientes WHERE id_usuario = %s", (request.id_usuario,))
-    clientes = [row[0] for row in cur.fetchall()]
-    
-    if not clientes:
-        return TriageResponse(status_fuzzy=True, resposta_dai="Sem acesso.", laudo_final="❌ Acesso Negado.")
-
+    resultado = None
     try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id_cliente FROM usuario_clientes WHERE id_usuario = %s", (request.id_usuario,))
+        clientes = [row[0] for row in cur.fetchall()]
+        
+        if not clientes:
+            cur.close()
+            conn.close()
+            return TriageResponse(status_fuzzy=True, resposta_dai="Sem acesso.", laudo_final="❌ Acesso Negado.")
+
         if embedder:
-            vetor_busca = embedder.embed_query(prompt)
+            try:
+                vetor_busca = embedder.embed_query(prompt)
+            except Exception as e:
+                print(f"⚠️ Embedder Ollama indisponível: {e}")
+                vetor_busca = [0.0] * 768
         else:
             vetor_busca = [0.0] * 768
-    except Exception as e:
-        print(f"⚠️ Embedder Ollama indisponível: {e}")
-        vetor_busca = [0.0] * 768
 
-    vetor_str = f"[{','.join(map(str, vetor_busca))}]"
-    
-    query_parts = [f"(SELECT texto_original, destino, 'Global' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_global_daisugi ORDER BY distancia ASC LIMIT 1)"]
-    for c in clientes:
-        query_parts.append(f"(SELECT texto_original, destino, '{c}' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_{c} ORDER BY distancia ASC LIMIT 1)")
+        vetor_str = f"[{','.join(map(str, vetor_busca))}]"
         
-    full_query = " UNION ALL ".join(query_parts) + " ORDER BY distancia ASC LIMIT 1;"
-    
-    try:
+        query_parts = [f"(SELECT texto_original, destino, 'Global' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_global_daisugi ORDER BY distancia ASC LIMIT 1)"]
+        for c in clientes:
+            query_parts.append(f"(SELECT texto_original, destino, '{c}' as cliente_destino, embedding <-> '{vetor_str}'::vector AS distancia FROM memoria_{c} ORDER BY distancia ASC LIMIT 1)")
+            
+        full_query = " UNION ALL ".join(query_parts) + " ORDER BY distancia ASC LIMIT 1;"
+        
         cur.execute(full_query)
         resultado = cur.fetchone()
-    except Exception:
-        resultado = None
-        conn.rollback()
-    finally:
         cur.close()
         conn.close()
+    except Exception as db_err:
+        print(f"⚠️ Banco de dados em modo offline/degradado: {db_err}")
+        resultado = None
 
     distancia = resultado[3] if resultado else 999.0
     
@@ -319,14 +334,15 @@ def processar_auditoria_kansa_async(hash_id: str, aprovado: bool):
 def validar_quarentena(
     request: QuarentenaRequest, 
     bg_tasks: BackgroundTasks, 
-    is_operator: bool = Depends(verify_operator_role)
+    user_payload: Dict[str, Any] = Depends(verify_operator_role)
 ):
     """
-    Rota BLINDADA. Apenas Tokens com Role: Operator acessam.
-    Usa BackgroundTasks para não deixar o App Mobile/Web pendurado (Hanging).
+    Rota BLINDADA. Apenas Tokens com Role de Checker/Validador acessam.
+    Integrado ao Daisugi_Ecosystem_Cofre-PAM-IGA com proteção contra auto-aprovação SoD (Maker/Checker).
     """
-    # Se chegou aqui, o middleware (verify_operator_role) já garantiu que é um operador.
-    
+    if request.maker_identity:
+        auth_guard.validate_maker_checker(user_payload, request.maker_identity)
+
     # Joga o processamento da Quarentena para a fila de background
     bg_tasks.add_task(processar_auditoria_kansa_async, request.hash_id_documento, request.aprovado)
     
@@ -334,7 +350,28 @@ def validar_quarentena(
     return {
         "status_http": 202,
         "message": "Solicitação aceita. O pacote JSON leve foi recebido e o Kan-sa assumiu a tarefa em segundo plano.",
-        "hash_processado": request.hash_id_documento
+        "hash_processado": request.hash_id_documento,
+        "validador_sub": user_payload.get("sub", "mock_user")
+    }
+
+@app.post("/auth/handshake")
+def auth_handshake(request: LoginRequest):
+    """
+    Handshake Pré-Lobby da DAI integrado ao Daisugi_Ecosystem_Cofre-PAM-IGA.
+    Valida credenciais, emite Token JWT e estabelece canal de confiança.
+    """
+    return login(request)
+
+@app.get("/api/admin/core-governance")
+def get_core_governance_status(dev_payload: Dict[str, Any] = Depends(auth_guard.require_core_developer)):
+    """Rota EXCLUSIVA do Desenvolvedor Core da Daisugi (Soberania de Código Akagui)."""
+    return {
+        "status": "AUTHORIZED",
+        "scope": "CORE_DEVELOPER_ONLY",
+        "developer": dev_payload.get("sub"),
+        "ecosystem": "Daisugi_Ecosystem_Cofre-PAM-IGA",
+        "governed_by": "Akagui / Montanha Vermelha",
+        "tenants": ["sugoi_sa"]
     }
 
 # ==========================================

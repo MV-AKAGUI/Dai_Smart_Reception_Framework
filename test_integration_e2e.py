@@ -95,6 +95,73 @@ def test_05_trava_fuzzy_anti_alucinacao():
     assert dados["status_fuzzy"] is True
     print("✅ [TESTE 5/5 PASSOU] Trava Anti-Alucinação Fuzzy aprovada.")
 
+def test_06_maker_checker_sod_quarentena():
+    """Valida a Segregação de Funções (SoD) impedindo que o Maker aprove sua própria quarentena."""
+    from daisugi_auth_guard import auth_guard
+
+    # Token do Engenheiro da Obra (Maker)
+    token_engenheiro = auth_guard.generate_token({
+        "sub": "engenheiro.obra@sugoisa.com.br",
+        "role": "checker", # Tentando usar role checker
+        "is_core_developer": False
+    })
+    headers_eng = {"Authorization": f"Bearer {token_engenheiro}"}
+
+    # Tentativa de auto-aprovação (Maker == Checker)
+    payload_auto_aprovacao = {
+        "hash_id_documento": "hash_medicao_obra_456",
+        "aprovado": True,
+        "maker_identity": "engenheiro.obra@sugoisa.com.br"
+    }
+    res_sod = client.post("/api/quarentena/validar", headers=headers_eng, json=payload_auto_aprovacao)
+    assert res_sod.status_code == 403
+    assert "Violação SoD Tóxica" in res_sod.json()["detail"]
+
+    # Aprovação por Checker legítimo e distinto (Controller)
+    token_controller = auth_guard.generate_token({
+        "sub": "controller@sugoisa.com.br",
+        "role": "checker",
+        "is_core_developer": False
+    })
+    headers_controller = {"Authorization": f"Bearer {token_controller}"}
+    res_ok = client.post("/api/quarentena/validar", headers=headers_controller, json=payload_auto_aprovacao)
+    assert res_ok.status_code == 202
+    print("✅ [TESTE 6/8 PASSOU] Segregação SoD (Maker != Checker) validada com sucesso.")
+
+def test_07_core_developer_lock():
+    """Valida a Trava Inegociável de Desenvolvedor Core (Soberania Akagui)."""
+    from daisugi_auth_guard import auth_guard
+
+    # 1. Usuário comum/cliente tentando acessar rota restrita -> 403 Forbidden
+    token_cliente = auth_guard.generate_token({
+        "sub": "usuario.cliente@sugoisa.com.br",
+        "role": "admin",
+        "is_core_developer": False
+    })
+    res_bloqueio = client.get("/api/admin/core-governance", headers={"Authorization": f"Bearer {token_cliente}"})
+    assert res_bloqueio.status_code == 403
+    assert "exclusiva do Desenvolvedor Core" in res_bloqueio.json()["detail"]
+
+    # 2. Desenvolvedor Core Oficial (montanhavermelha@akagui.com) -> 200 OK
+    res_login_dev = client.post("/auth/login", json={"usuario": "montanhavermelha@akagui.com", "senha": "123"})
+    assert res_login_dev.status_code == 200
+    token_dev = res_login_dev.json()["token_jwt"]
+
+    res_dev = client.get("/api/admin/core-governance", headers={"Authorization": f"Bearer {token_dev}"})
+    assert res_dev.status_code == 200
+    assert res_dev.json()["status"] == "AUTHORIZED"
+    assert res_dev.json()["scope"] == "CORE_DEVELOPER_ONLY"
+    print("✅ [TESTE 7/8 PASSOU] Trava de Soberania Core Developer Akagui 100% blindada.")
+
+def test_08_handshake_cofre_pam_iga():
+    """Valida o handshake pré-lobby integrado ao ecossistema central do Cofre PAM/IGA."""
+    res_handshake = client.post("/auth/handshake", json={"usuario": "controller", "senha": "123"})
+    assert res_handshake.status_code == 200
+    dados = res_handshake.json()
+    assert dados["autenticado"] is True
+    assert dados["perfil"] == "admin"
+    print("✅ [TESTE 8/8 PASSOU] Handshake Pré-Lobby DAI × Cofre-PAM-IGA operacional.")
+
 if __name__ == "__main__":
     print("\n" + "="*60)
     print("🔬 INICIANDO TESTES DE INTEGRAÇÃO E2E (AUDITORIA DR. TAYLOR)")
@@ -104,6 +171,9 @@ if __name__ == "__main__":
     test_03_quarentena_rbac_blindagem()
     test_04_cache_redis_o1()
     test_05_trava_fuzzy_anti_alucinacao()
+    test_06_maker_checker_sod_quarentena()
+    test_07_core_developer_lock()
+    test_08_handshake_cofre_pam_iga()
     print("="*60)
-    print("🏆 TODOS OS TESTES PASSARAM COM 100% DE SUCESSO!")
+    print("🏆 TODOS OS 8 TESTES PASSARAM COM 100% DE SUCESSO!")
     print("="*60 + "\n")

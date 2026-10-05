@@ -5,6 +5,7 @@ Utilizado por: DAI, KAN-SA, HUDSON e futuros microserviços.
 """
 
 import os
+import time
 from typing import Dict, Any, Optional, List
 import jwt
 from fastapi import HTTPException, Security, Depends
@@ -21,6 +22,15 @@ class DaisugiAuthGuard:
     def __init__(self, secret_key: Optional[str] = None, algorithm: str = "HS256"):
         self.secret_key = secret_key or os.getenv("DAISUGI_JWT_SECRET", "daisugi_master_vault_secret_key_2026")
         self.algorithm = algorithm
+
+    def generate_token(self, payload: Dict[str, Any], expires_in: int = 86400) -> str:
+        """Emite token JWT criptograficamente assinado com claims oficiais do PAM/IGA."""
+        token_payload = payload.copy()
+        now = int(time.time())
+        token_payload.setdefault("iat", now)
+        token_payload.setdefault("exp", now + expires_in)
+        token_payload.setdefault("iss", "Daisugi_Ecosystem_Cofre-PAM-IGA")
+        return jwt.encode(token_payload, self.secret_key, algorithm=self.algorithm)
 
     def decode_token(self, token: str) -> Dict[str, Any]:
         """Decodifica e valida a assinatura criptográfica do Token JWT."""
@@ -55,7 +65,7 @@ class DaisugiAuthGuard:
         if role not in ["checker", "operator", "admin", "core_developer"]:
             raise HTTPException(
                 status_code=403,
-                detail="Violação SoD: Esta Cadeira não possui alçada de Validador/Checker de Quarentena."
+                detail="Privilege Escalation Detectado: Violação SoD. Esta Cadeira não possui alçada de Validador/Checker de Quarentena."
             )
         return payload
 

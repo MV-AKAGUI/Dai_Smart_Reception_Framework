@@ -7,3 +7,5 @@ requests>=2.31.0
 python-multipart>=0.0.9
 streamlit>=1.32.0
 pillow>=10.2.0
+PyJWT>=2.8.0
+cryptography>=42.0.0
