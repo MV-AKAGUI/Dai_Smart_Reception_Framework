@@ -131,7 +131,7 @@ st.markdown("""
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
-API_BASE_URL = "http://localhost:8005"
+API_BASE_URL = os.getenv("DAI_API_URL", "http://localhost:8001")
 
 if not st.session_state.autenticado:
     # Mostramos o Avatar na portaria também para dar boas-vindas
@@ -149,13 +149,13 @@ if not st.session_state.autenticado:
         st.markdown(f"{subtitulo_portaria}")
         
         with st.form("login_form"):
-            usuario = st.text_input("Usuário (Dica: admin, dev, cliente)").lower()
+            usuario = st.text_input("Usuário (Dica: admin, cliente)").lower()
             senha = st.text_input("Senha (Dica: 123)", type="password")
             submit_btn = st.form_submit_button("Entrar no Lobby")
             
             if submit_btn:
                 try:
-                    res = requests.post(f"{API_BASE_URL}/auth/login", json={"usuario": usuario, "senha": senha})
+                    res = requests.post(f"{API_BASE_URL}/auth/login", json={"usuario": usuario, "senha": senha}, timeout=5)
                     if res.status_code == 200:
                         dados = res.json()
                         st.session_state.autenticado = True
@@ -163,11 +163,13 @@ if not st.session_state.autenticado:
                         st.session_state.paciente_nome = dados.get("nome", "Usuário")
                         st.session_state.paciente_perfil = dados.get("perfil", "Desconhecido")
                         st.session_state.salas_liberadas = dados.get("salas_liberadas", [])
+                        st.session_state.clientes_acesso = dados.get("clientes_acesso", [])
+                        st.session_state.token_jwt = dados.get("token_jwt", "")
                         st.rerun()
                     else:
                         st.error("❌ Credenciais inválidas.")
                 except requests.exceptions.ConnectionError:
-                    st.error("❌ Erro: O Backend da Dai não está rodando. Inicie a API primeiro.")
+                    st.error(f"❌ Erro de conexão: O Backend da Dai não respondeu em {API_BASE_URL}.")
     
     # Se não autenticado, paramos o código aqui
     st.stop()
@@ -195,6 +197,7 @@ with st.sidebar:
 tab_chat, tab_salas, tab_ficha = st.tabs(["💬 Lobby (Recepção)", "🚪 Salas e Corredores", "📋 Seu Contexto (Ticket/Laudo)"])
 
 # ----------------------------------------------------
+# ----------------------------------------------------
 # TAB 2: O CORREDOR E SALAS
 # ----------------------------------------------------
 with tab_salas:
@@ -213,7 +216,39 @@ with tab_salas:
         for i, sala in enumerate(salas):
             col = col_s1 if i % 2 == 0 else col_s2
             with col:
-                cores[i % len(cores)](f"🚪 {sala.get('nome', sala)} - {sala.get('funcao', '')}\n\n`🟢 Online`" if isinstance(sala, dict) else f"🚪 {sala}\n\n`🟢 Online`")
+                nome_sala = sala.get('nome', sala) if isinstance(sala, dict) else str(sala)
+                funcao_sala = sala.get('funcao', '') if isinstance(sala, dict) else ''
+                cores[i % len(cores)](f"🚪 **{nome_sala}**\n\n_{funcao_sala}_\n\n`🟢 Online`")
+
+    # Módulo Especial de Quarentena para Operadores / Admin (Integração Kan-sa)
+    if st.session_state.paciente_perfil == "admin":
+        st.markdown("---")
+        st.markdown("### 🛡️ Painel de Quarentena & Desacoplamento Assíncrono (Kan-sa / Hudson)")
+        st.caption("Acesso restrito: Validação de documentos em lote sem travamento de tela (HTTP 202 Accepted).")
+        
+        with st.form("quarentena_form"):
+            hash_doc = st.text_input("Hash SHA-256 do Documento / CCB", value="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+            decisao = st.selectbox("Parecer do Operador", ["Aprovar e Liberar para Kan-sa", "Rejeitar Documento"])
+            submit_quarentena = st.form_submit_button("Despachar Auditoria em Background")
+            
+            if submit_quarentena:
+                aprovado_bool = "Aprovar" in decisao
+                headers = {"Authorization": f"Bearer {st.session_state.get('token_jwt', '')}"}
+                try:
+                    res = requests.post(
+                        f"{API_BASE_URL}/api/quarentena/validar",
+                        headers=headers,
+                        json={"hash_id_documento": hash_doc, "aprovado": aprovado_bool},
+                        timeout=5
+                    )
+                    if res.status_code == 202:
+                        retorno = res.json()
+                        st.success(f"✅ **HTTP 202 Accepted**: {retorno.get('message')}")
+                        st.info(f"🆔 **Hash em processamento:** `{retorno.get('hash_processado')}`")
+                    else:
+                        st.error(f"❌ Erro {res.status_code}: {res.text}")
+                except Exception as e:
+                    st.error(f"❌ Falha de comunicação com a API: {e}")
 
 # ----------------------------------------------------
 # TAB 3: FICHA E LAUDO FINAL
@@ -222,7 +257,7 @@ with tab_ficha:
     # FICHA DO PACIENTE / TICKET
     titulo_ficha = config.get("textos", {}).get("titulo_ficha", "Contexto do Usuário (Ticket)")
     label_historico = config.get("textos", {}).get("label_historico", "Histórico de Interações e Demandas Anteriores:")
-    valor_historico_padrao = config.get("textos", {}).get("valor_historico_padrao", "Nenhuma demanda pendente registrada.\\n\\nAguardando triagem no Lobby...")
+    valor_historico_padrao = config.get("textos", {}).get("valor_historico_padrao", "Nenhuma demanda pendente registrada.\n\nAguardando triagem no Lobby...")
     
     st.markdown(f"### 📋 {titulo_ficha}")
     st.text_area(label_historico, value=valor_historico_padrao, height=100, disabled=True)
@@ -233,11 +268,45 @@ with tab_ficha:
     titulo_laudo = config.get("textos", {}).get("titulo_laudo", "Laudo de Triagem / Roteamento")
     st.markdown(f"### 💊 {titulo_laudo}")
     
-    # Checa se existe um laudo guardado na sessao
     laudo_vazio = config.get("textos", {}).get("laudo_vazio", "Nenhum roteamento emitido ainda. Fale com a Dai na aba do Lobby.")
     laudo_texto = st.session_state.get("laudo_final", laudo_vazio)
     st.success(laudo_texto)
 
+    # Formulário de Aprendizado Contínuo para Especialistas
+    st.markdown("---")
+    st.markdown("### 🧠 Retroalimentação & Aprendizado da Dai (`/triage/learn`)")
+    st.caption("Quando um especialista conclui a demanda, esta solução vira sinapse no banco vetorial.")
+    
+    with st.form("learn_form"):
+        queixa_orig = st.text_input("Queixa Original do Usuário", value=st.session_state.get("ultima_queixa", ""))
+        sala_destino = st.text_input("Sala / Especialidade Final", value=st.session_state.get("ultimo_destino", "Sala Suporte"))
+        resolucao_esp = st.text_area("Resolução do Especialista (Prontuário)", placeholder="Descreva como o problema foi solucionado com exatidão...")
+        is_global = st.checkbox("Tornar Conhecimento Global (Beneficia todos os clientes)", value=False)
+        cliente_alvo = st.text_input("Identificador do Cliente", value="controladoria")
+        
+        btn_ensinar = st.form_submit_button("Gravar na Memória da Dai")
+        if btn_ensinar:
+            if not resolucao_esp or not queixa_orig:
+                st.warning("Preencha a queixa e a resolução para registrar a evolução.")
+            else:
+                try:
+                    res_learn = requests.post(
+                        f"{API_BASE_URL}/triage/learn",
+                        json={
+                            "texto_usuario": queixa_orig,
+                            "destino_final": sala_destino,
+                            "cliente_destino": cliente_alvo,
+                            "resolucao_especialista": resolucao_esp,
+                            "is_global": is_global
+                        },
+                        timeout=5
+                    )
+                    if res_learn.status_code == 200:
+                        st.success(res_learn.json().get("mensagem", "Evolução gravada!"))
+                    else:
+                        st.error(f"❌ Erro ao salvar aprendizado: {res_learn.text}")
+                except Exception as e:
+                    st.error(f"❌ Falha de conexão: {e}")
 
 # ----------------------------------------------------
 # TAB 1: A RECEPÇÃO (CHAT DA DAI) - Fica por último no código, mas na primeira Aba
@@ -255,7 +324,7 @@ with tab_chat:
     if "messages" not in st.session_state or st.session_state.messages[0]["content"] != msg_boas_vindas:
         st.session_state.messages = [{"role": "assistant", "content": msg_boas_vindas}]
 
-    # Carrega a imagem via Base64 (Método à prova de falhas)
+    # Carrega a imagem via Base64
     avatar_img = config.get("avatar", {}).get("imagem_lobby", "Dai_Avatar.png")
     avatar_emoji = config.get("avatar", {}).get("emoji", "👩🏻‍💼")
     icone_usuario = config.get("avatar", {}).get("icone_usuario", "👤")
@@ -275,29 +344,33 @@ with tab_chat:
     dica_input = config.get("textos", {}).get("dica_input_chat", "Diga sua queixa à Dai...")
     if prompt := st.chat_input(dica_input):
         st.session_state.messages.append({"role": "user", "content": prompt})
+        st.session_state.ultima_queixa = prompt
         with st.chat_message("user", avatar=icone_usuario):
             st.markdown(prompt)
 
         with st.chat_message("assistant", avatar=dai_avatar):
-            if prompt.strip().lower() == "/auditoria":
-                st.session_state.laudo_final = "🕵️ Auditoria interna acionada. Imprimindo logs no console."
-                st.markdown("🤫 Extraindo registros da mente vetorial...")
-                st.session_state.messages.append({"role": "assistant", "content": "🤫 Extraindo registros da mente vetorial..."})
-                st.rerun()
-            
             try:
                 # Chama a API de Triagem
                 res = requests.post(f"{API_BASE_URL}/chat/triage", json={
                     "texto_usuario": prompt,
                     "id_usuario": st.session_state.get("paciente_id", 1)
-                })
+                }, timeout=5)
                 if res.status_code == 200:
                     dados = res.json()
                     st.session_state.laudo_final = dados["laudo_final"]
-                    st.markdown(dados["resposta_dai"])
-                    st.session_state.messages.append({"role": "assistant", "content": dados["resposta_dai"]})
-                    st.rerun() # Atualiza a tela para mostrar o laudo na direita
+                    
+                    texto_resposta = dados["resposta_dai"]
+                    if dados.get("cache_hit"):
+                        texto_resposta = f"⚡ **[Cache Redis O(1) Hit]**\n\n{texto_resposta}"
+                    
+                    if dados.get("destino"):
+                        st.session_state.ultimo_destino = dados["destino"]
+
+                    st.markdown(texto_resposta)
+                    st.session_state.messages.append({"role": "assistant", "content": texto_resposta})
+                    st.rerun()
                 else:
                     st.error("❌ Erro interno na Mente Vetorial da Dai.")
             except requests.exceptions.ConnectionError:
-                st.error("❌ Conexão perdida com o Backend da Dai.")
+                st.error(f"❌ Conexão perdida com o Backend da Dai em {API_BASE_URL}.")
+
