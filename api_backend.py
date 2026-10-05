@@ -245,7 +245,7 @@ def processar_auditoria_kansa_async(hash_id: str, aprovado: bool):
     status = "APROVADO" if aprovado else "REJEITADO"
     print(f"✅ [BACKGROUND TASK] Auditoria finalizada. Status: {status}. Hudson notificado via Webhook.")
 
-@app.post("/api/quarentena/validar")
+@app.post("/api/quarentena/validar", status_code=202)
 def validar_quarentena(
     request: QuarentenaRequest, 
     bg_tasks: BackgroundTasks, 
