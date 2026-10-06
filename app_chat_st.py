@@ -257,15 +257,15 @@ if not st.session_state.autenticado:
         st.markdown("<span style='font-size: 0.85rem; color: #cbd5e1; font-weight: 600;'>⚡ Acesso Rápido por Cadeira PAM:</span>", unsafe_allow_html=True)
         c_chips = st.columns(4)
         perfis_rapidos = [
-            ("Controller", "controller"),
-            ("Advogado", "advogado"),
-            ("Engenheiro", "engenheiro"),
-            ("Diretor", "diretor"),
+            ("Presidência", "ronaldo.akagui@sugoisa.com.br"),
+            ("Operações", "renato.barroso@sugoisa.com.br"),
+            ("Engenharia", "luiz.perez@sugoisa.com.br"),
+            ("Controladoria", "controller@sugoisa.com.br"),
         ]
         c_chips_2 = st.columns(3)
         perfis_rapidos_2 = [
-            ("Admin Geral", "admin"),
-            ("Visitante/Cliente", "cliente"),
+            ("Contas a Pagar", "contasapagar@sugoisa.com.br"),
+            ("Obras/Prod", "especialista.producaoeng@sugoisa.com.br"),
             ("Dev Core (Akagui)", "montanhavermelha@akagui.com")
         ]
         

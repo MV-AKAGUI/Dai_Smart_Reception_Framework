@@ -261,6 +261,75 @@ def login(request: LoginRequest):
             clientes_acesso=["controladoria"],
             token_jwt="token_jwt_cliente_comum"
         )
+    # Suporte Dinâmico para Cadeiras Oficiais SUGOI (R03 + JumpCloud)
+    elif any(k in u for k in ['ronaldo', 'presidente', 'presidencia', 'diretor.presidente']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "admin", "cadeira": "diretor.presidente@sugoisa.com.br", "rota": "ROTA_B_PAM"})
+        return LoginResponse(
+            autenticado=True, id_usuario=101, nome="Ronaldo Akagui (Diretor Presidente)", perfil="admin",
+            salas_liberadas=[Sala(nome="Painel Presidência & Métricas", funcao="Governança Máxima", cor="#00B4D8"), Sala(nome="Painel Quarentena", funcao="Auditoria Total Kan-sa", cor="#EF4444")],
+            clientes_acesso=["controladoria", "engenharia", "operacoes"], token_jwt=jwt_token
+        )
+    elif any(k in u for k in ['renato', 'operacoes', 'diretor.operacoes']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "admin", "cadeira": "diretor.operacoes@sugoisa.com.br", "rota": "ROTA_B_PAM"})
+        return LoginResponse(
+            autenticado=True, id_usuario=102, nome="Renato Barroso (Diretor de Operações)", perfil="admin",
+            salas_liberadas=[Sala(nome="Cockpit Operações", funcao="Sustentação Corporativa", cor="#00A86B"), Sala(nome="Painel Quarentena", funcao="Auditoria Operacional", cor="#EF4444")],
+            clientes_acesso=["operacoes", "controladoria"], token_jwt=jwt_token
+        )
+    elif any(k in u for k in ['luiz', 'engenharia', 'diretor.engenharia']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "admin", "cadeira": "diretor.engenharia@sugoisa.com.br", "rota": "ROTA_B_PAM"})
+        return LoginResponse(
+            autenticado=True, id_usuario=103, nome="Luiz Perez (Diretor de Engenharia)", perfil="admin",
+            salas_liberadas=[Sala(nome="Engenharia & Obras", funcao="Controle Físico e Medições", cor="#10B981"), Sala(nome="Painel Quarentena", funcao="Validação de Risco", cor="#EF4444")],
+            clientes_acesso=["engenharia", "controladoria"], token_jwt=jwt_token
+        )
+    elif any(k in u for k in ['fernando', 'controlador', 'pmo.controladoria']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "admin", "cadeira": "pmo.controladoria@sugoisa.com.br", "rota": "ROTA_B_PAM"})
+        return LoginResponse(
+            autenticado=True, id_usuario=104, nome="Fernando Brasil (PMO Controladoria / Checker)", perfil="admin",
+            salas_liberadas=[Sala(nome="Painel Quarentena", funcao="Checker SoD Quarentena", cor="#EF4444"), Sala(nome="Governança de Travas ERP", funcao="Parametrização Sienge", cor="#3B82F6")],
+            clientes_acesso=["controladoria"], token_jwt=jwt_token
+        )
+    elif any(k in u for k in ['flavia', 'financeiro', 'pmo.financeiro']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": "pmo.financeiro@sugoisa.com.br", "rota": "ROTA_A_SSO"})
+        return LoginResponse(
+            autenticado=True, id_usuario=105, nome="Flávia Akagui (PMO Financeiro)", perfil="cliente",
+            salas_liberadas=[Sala(nome="Administrativo Financeiro", funcao="Gestão de Contas e Fluxo", cor="#3B82F6")],
+            clientes_acesso=["controladoria"], token_jwt=jwt_token
+        )
+    elif any(k in u for k in ['grazielli', 'contasapagar', 'contas.pagar', 'auxiliar.contaspagar']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": "auxiliar.contaspagar@sugoisa.com.br", "rota": "ROTA_A_SSO"})
+        return LoginResponse(
+            autenticado=True, id_usuario=106, nome="Grazielli Nascimento (Contas a Pagar)", perfil="cliente",
+            salas_liberadas=[Sala(nome="Contas a Pagar", funcao="Lançador Maker", cor="#3B82F6")],
+            clientes_acesso=["controladoria"], token_jwt=jwt_token
+        )
+    elif any(k in u for k in ['lukas', 'producao', 'obras', 'especialista.producaoeng']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": "especialista.producaoeng@sugoisa.com.br", "rota": "ROTA_A_SSO"})
+        return LoginResponse(
+            autenticado=True, id_usuario=107, nome="Lukas Kostakis (Especialista Produção/Obras)", perfil="cliente",
+            salas_liberadas=[Sala(nome="Produção e Execução de Obras", funcao="Maker de Medições", cor="#10B981")],
+            clientes_acesso=["engenharia"], token_jwt=jwt_token
+        )
+    elif any(k in u for k in ['denise', 'facilities', 'assistente.facilities']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": "assistente.facilities@sugoisa.com.br", "rota": "ROTA_A_SSO"})
+        return LoginResponse(
+            autenticado=True, id_usuario=108, nome="Denise Segatelli (Facilities)", perfil="cliente",
+            salas_liberadas=[Sala(nome="Gestão Predial & Facilities", funcao="Solicitações e Suporte", cor="#6B7280")],
+            clientes_acesso=["operacoes"], token_jwt=jwt_token
+        )
+    elif '@sugoisa.com.br' in u or '@daisugi.com.br' in u or len(u) >= 3:
+        nome_formatado = u.split('@')[0].replace('.', ' ').title()
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": u, "rota": "ROTA_A_SSO"})
+        return LoginResponse(
+            autenticado=True, id_usuario=200, nome=f"{nome_formatado} (Operações SUGOI)", perfil="cliente",
+            salas_liberadas=[
+                Sala(nome="Recepção & Triagem Inteligente", funcao="Atendimento DAI", cor="#10B981"),
+                Sala(nome="Contexto & Laudos Executivos", funcao="Consulta e Ingestão", cor="#00B4D8"),
+                Sala(nome="HDW Repositório (SharePoint)", funcao="Acesso aos Documentos", cor="#F59E0B")
+            ],
+            clientes_acesso=["controladoria"], token_jwt=jwt_token
+        )
 
     raise HTTPException(status_code=401, detail="Credenciais inválidas.")
 
@@ -281,7 +350,7 @@ def triage(request: TriageRequest):
         link_dw = {
             "titulo": f"Registro de Auditoria DW: Ref. {codigo_rastreamento}",
             "hash": hashlib.sha256(prompt.encode()).hexdigest(),
-            "url": f"https://dw.cliente.daisugi.com.br/docs/{codigo_rastreamento}",
+            "url": f"https://sugoiconstrutora.sharepoint.com/:f:/r/sites/DataHubDocumentalSUGOI/Documentos%20Compartilhados/SUGOI_HUB_GED/HUB_EXTERNO/00_REPOSIT%C3%93RIO/HDW-TRANSIT%C3%93RIO?doc={codigo_rastreamento}",
             "repositorio": "Data Warehouse Corporativo - Partição Fiduciária"
         }
         arquivo_anexo = {
