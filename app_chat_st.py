@@ -7,7 +7,10 @@ import requests
 import io
 import time
 from datetime import datetime
-import qrcode
+try:
+    import qrcode
+except ImportError:
+    qrcode = None
 
 # ==========================================
 # CONFIGURAÇÃO E CARREGAMENTO
@@ -29,6 +32,8 @@ def get_base64_image(image_path: str) -> str:
 
 def generate_qr_code_base64(data_text: str) -> str:
     """Gera QR Code nítido em formato Base64 para crachás e comprovantes."""
+    if qrcode is None:
+        return ""
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_M,
