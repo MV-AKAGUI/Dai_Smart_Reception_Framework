@@ -5,7 +5,7 @@
     "icone": "👩🏻‍💼"
   },
   "tema": {
-    "cor_primaria": "#10b981",
+    "cor_primaria": "#00A86B",
     "cor_secundaria": "#0B192C"
   },
   "textos": {
@@ -14,14 +14,14 @@
     "termo_usuario_logado": "Usuário Logado",
     "termo_perfil_acesso": "Perfil de Acesso",
     "titulo_corredor": "Salas Disponíveis - Nível",
-    "titulo_ficha": "Contexto do Usuário (Ticket)",
+    "titulo_ficha": "Seu Contexto (Ingresso/Laudo)",
     "label_historico": "Histórico de Interações e Demandas Anteriores:",
     "valor_historico_padrao": "Nenhuma demanda pendente registrada.\n\nAguardando triagem no Lobby...",
     "titulo_laudo": "Laudo de Triagem / Roteamento",
     "laudo_vazio": "Nenhum roteamento emitido ainda. Fale com a Dai à esquerda.",
     "titulo_chat": "台 Dai - Lobby Central",
     "subtitulo_chat": "*A Recepção Inteligente baseada em Equilibrio, Memória e Sentido.*",
-    "mensagem_boas_vindas": "Olá, sou a Dai. O que te trouxe até aqui? Como posso te ajudar a encontrar a sala certa?",
+    "mensagem_boas_vindas": "Olá, sou a Dai, agente de triagem do Daisugi. Posso te ajudar diretamente, ou, te direcionar a alguma outra sala, me diga o que precisa.",
     "dica_input_chat": "Descreva sua demanda para a Dai..."
   },
   "avatar": {

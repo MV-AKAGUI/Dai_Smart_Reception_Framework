@@ -74,6 +74,25 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
+    /* Otimização Mobile-First: Redução de espaço vertical superior */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 100% !important;
+    }
+
+    /* Redução de espaço vertical na barra lateral (Sidebar) */
+    section[data-testid="stSidebar"] .block-container {
+        padding-top: 1.2rem !important;
+        padding-bottom: 1rem !important;
+    }
+    section[data-testid="stSidebar"] hr {
+        margin-top: 8px !important;
+        margin-bottom: 8px !important;
+    }
+
     /* Cards com Glassmorphism */
     div[data-testid="stForm"], div[data-testid="stSidebar"] {
         background: rgba(15, 23, 42, 0.75) !important;
@@ -82,6 +101,29 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 16px !important;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Caixas dos Sistemas Disponíveis na vertical (Kan-sa, Kigyou, HDW) */
+    .sistema-card-box {
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sistema-card-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    .sistema-kansa {
+        border-left: 4px solid #00A86B;
+    }
+    .sistema-kigyou {
+        border-left: 4px solid #00B4D8;
+    }
+    .sistema-hdw {
+        border-left: 4px solid #F59E0B;
     }
 
     /* Botões Padrão */
@@ -284,11 +326,11 @@ def checar_status_api(url: str):
     return False, {}
 
 with st.sidebar:
-    st.markdown("<div style='text-align: center; margin-bottom: 12px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; margin-bottom: 8px;'>", unsafe_allow_html=True)
     avatar_lobby = config.get("avatar", {}).get("imagem_lobby", "lobby_avatar.jpg")
     if os.path.exists(avatar_lobby):
-        st.image(avatar_lobby, width=90)
-    st.markdown("### 台 Dai Smart Reception</div>", unsafe_allow_html=True)
+        st.image(avatar_lobby, width=190)
+    st.markdown("<h3 style='margin-top: 6px; margin-bottom: 4px;'>台 Dai Smart Reception</h3></div>", unsafe_allow_html=True)
     
     api_online, health_data = checar_status_api(API_BASE_URL)
     if api_online:
@@ -326,25 +368,76 @@ with st.sidebar:
 # ==========================================
 # 2. ABAS PRINCIPAIS (LOBBY, SALAS E CONTEXTO)
 # ==========================================
-tab_chat, tab_salas, tab_ficha = st.tabs([
-    "💬 Lobby (Recepção Inteligente)",
-    "🚪 Salas e Corredores (Anfitriões)",
-    "📋 Seu Contexto (Ticket & QR Code VIP)"
+tab_chat, tab_ficha = st.tabs([
+    "💬 Hall de entrada (Recepção)",
+    "📋 Seu Contexto (Ingresso/Laudo)"
 ])
 
 # ----------------------------------------------------
 # TAB 1: O CHAT INTUITIVO DA DAI (ESTILO LLM)
 # ----------------------------------------------------
 with tab_chat:
-    cor_primaria = config.get("tema", {}).get("cor_primaria", "#10b981")
-    titulo_chat = config.get("textos", {}).get("titulo_chat", "台 Dai - Recepção Inteligente")
+    cor_primaria = config.get("tema", {}).get("cor_primaria", "#00A86B")
+    titulo_chat = config.get("textos", {}).get("titulo_chat", "台 Dai - Lobby Central")
     subtitulo_chat = config.get("textos", {}).get("subtitulo_chat", "*Acolhimento empático, triagem instantânea e resolutividade corporativa.*")
     
-    st.markdown(f"<h3 style='color: {cor_primaria}; margin-bottom: 2px;'>{titulo_chat}</h3>", unsafe_allow_html=True)
-    st.markdown(f"<p style='color: #94a3b8; font-size: 0.95rem; margin-bottom: 15px;'>{subtitulo_chat}</p>", unsafe_allow_html=True)
+    col_chat, col_sistemas = st.columns([2.7, 1.3], gap="medium")
+    
+    with col_sistemas:
+        st.markdown("<h4 style='color: #00A86B; margin-top: 4px; margin-bottom: 12px; font-weight: 700;'>🏛️ Sistemas Disponíveis</h4>", unsafe_allow_html=True)
+        
+        # Caixa 1: Kan-sa
+        st.markdown("""
+        <div class='sistema-card-box sistema-kansa'>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <strong style='font-size: 1.05rem; color: #f8fafc;'>監査 Kan-sa</strong>
+                <span style='background: rgba(0, 168, 107, 0.2); color: #34d399; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>🟢 Online</span>
+            </div>
+            <p style='color: #94a3b8; font-size: 0.8rem; margin: 6px 0 10px 0; line-height: 1.4;'>
+                Auditoria Pericial Contábil Forense, DFP & Reconstituição Histórica do Endividamento.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Acessar Kan-sa ➔", key="btn_goto_kansa", use_container_width=True):
+            st.session_state.quick_prompt_selecionado = "Preciso auditar o endividamento e acessar a esteira pericial do Kan-sa."
+            st.rerun()
+
+        # Caixa 2: Kigyou
+        st.markdown("""
+        <div class='sistema-card-box sistema-kigyou' style='margin-top: 14px;'>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <strong style='font-size: 1.05rem; color: #f8fafc;'>企業 Kigyou</strong>
+                <span style='background: rgba(0, 180, 216, 0.2); color: #38bdf8; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>🔵 Disponível</span>
+            </div>
+            <p style='color: #94a3b8; font-size: 0.8rem; margin: 6px 0 10px 0; line-height: 1.4;'>
+                Metabolismo Financeiro, Governança & Gestão de Ativos Corporativos.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Acessar Kigyou", key="btn_goto_kigyou", use_container_width=True):
+            st.session_state.quick_prompt_selecionado = "Gostaria de consultar as diretrizes de governança e metabolismo no Kigyou."
+            st.rerun()
+
+        # Caixa 3: HDW
+        st.markdown("""
+        <div class='sistema-card-box sistema-hdw' style='margin-top: 14px;'>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <strong style='font-size: 1.05rem; color: #f8fafc;'>📂 HDW</strong>
+                <span style='background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>📁 Transitório</span>
+            </div>
+            <p style='color: #94a3b8; font-size: 0.8rem; margin: 6px 0 10px 0; line-height: 1.4;'>
+                Repositório Documental em Nuvem (SharePoint SUGOI HUB GED) & Custódia Digital.
+            </p>
+            <a href='https://sugoiconstrutora.sharepoint.com/:f:/r/sites/DataHubDocumentalSUGOI/Documentos%20Compartilhados/SUGOI_HUB_GED/HUB_EXTERNO/00_REPOSIT%C3%93RIO/HDW-TRANSIT%C3%93RIO?d=waf9ad30eee2a4df3a15e018b4c2215f5&csf=1&web=1&e=DXEV88' target='_blank' style='display: block; text-align: center; background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: 700; margin-top: 6px;'>Abrir Pasta HDW ↗</a>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_chat:
+        st.markdown(f"<h3 style='color: {cor_primaria}; margin-bottom: 2px;'>{titulo_chat}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color: #94a3b8; font-size: 0.95rem; margin-bottom: 12px;'>{subtitulo_chat}</p>", unsafe_allow_html=True)
 
     # Mensagem inicial de boas-vindas da Dai
-    msg_boas_vindas = config.get("textos", {}).get("mensagem_boas_vindas", "Olá! Sou a Dai. Seja muito bem-vindo à nossa recepção. Como posso acolher sua demanda e direcioná-lo ao especialista correto hoje?")
+    msg_boas_vindas = config.get("textos", {}).get("mensagem_boas_vindas", "Olá, sou a Dai, agente de triagem do Daisugi. Posso te ajudar diretamente, ou, te direcionar a alguma outra sala, me diga o que precisa.")
     if not st.session_state.messages:
         st.session_state.messages = [{
             "role": "assistant",
@@ -476,108 +569,6 @@ with tab_chat:
                         st.error("❌ Erro interno no Cérebro da Dai.")
                 except requests.exceptions.ConnectionError:
                     st.error(f"❌ Conexão perdida com o Backend da Dai em {API_BASE_URL}.")
-
-# ----------------------------------------------------
-# TAB 2: SALAS E CORREDORES (COM NOTIFICAÇÃO AO ANFITRIÃO)
-# ----------------------------------------------------
-with tab_salas:
-    titulo_corredor = config.get("textos", {}).get("titulo_corredor", "Corredor de Acesso - Nível")
-    st.markdown(f"### 🚪 {titulo_corredor} `{st.session_state.paciente_perfil.upper()}`")
-    st.markdown("<p style='color: #94a3b8; font-size: 0.9rem;'>Salas autorizadas pela sua Cadeira PAM. Clique para notificar o anfitrião de que você está a caminho.</p>", unsafe_allow_html=True)
-    
-    salas = st.session_state.get("salas_liberadas", [])
-    if not salas:
-        st.warning("Nenhuma sala liberada para este perfil de acesso.")
-    else:
-        cols = st.columns(2)
-        for i, sala in enumerate(salas):
-            col = cols[i % 2]
-            with col:
-                nome_sala = sala.get('nome', sala) if isinstance(sala, dict) else str(sala)
-                funcao_sala = sala.get('funcao', 'Atendimento Corporativo') if isinstance(sala, dict) else 'Atendimento Corporativo'
-                cor_card = sala.get('cor', '#10B981') if isinstance(sala, dict) else '#10B981'
-                
-                notificado_info = st.session_state.anfitriao_notificado.get(nome_sala)
-                badge_notif = f"<span style='color: #f59e0b; font-weight: 600; font-size: 0.8rem;'>🔔 Notificado às {notificado_info}</span>" if notificado_info else "<span style='color: #10b981; font-weight: 600; font-size: 0.8rem;'>🟢 Anfitrião de Plantão</span>"
-
-                st.markdown(f"""
-                <div style='background: rgba(30, 41, 59, 0.7); border-left: 5px solid {cor_card}; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.06);'>
-                    <div style='display: flex; justify-content: space-between; align-items: center;'>
-                        <h4 style='margin: 0; color: #f8fafc;'>🚪 {nome_sala}</h4>
-                        {badge_notif}
-                    </div>
-                    <p style='color: #94a3b8; margin: 6px 0 12px 0; font-size: 0.85rem;'>{funcao_sala}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                btn_notif = st.button(f"🔔 Notificar Anfitrião ({nome_sala})", key=f"btn_notif_{i}", use_container_width=True)
-                if btn_notif:
-                    agora_str = datetime.now().strftime("%H:%M:%S")
-                    st.session_state.anfitriao_notificado[nome_sala] = agora_str
-                    
-                    # Mensagem de confirmação empática
-                    st.toast(f"✅ Anfitrião da sala '{nome_sala}' notificado via Hudson Event Hub!", icon="🔔")
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": f"🔔 **[Notificação de Anfitrião Emitida]**\n\nAvisei o anfitrião da sala **{nome_sala}** sobre sua chegada. Ele já recebeu suas credenciais e está aguardando você.",
-                        "arquivo_anexo": None,
-                        "link_dw": None
-                    })
-                    st.rerun()
-
-    # Módulo Especial de Quarentena (Kan-sa / Hudson) para Admin e Core Dev
-    if st.session_state.paciente_perfil in ["admin", "core_developer"]:
-        st.markdown("---")
-        st.markdown("### 🛡️ Painel de Quarentena & Desacoplamento Assíncrono (Kan-sa / Hudson)")
-        st.caption("Acesso restrito: Validação de documentos em lote com segregação SoD (HTTP 202 Accepted).")
-        
-        with st.form("quarentena_form"):
-            hash_doc = st.text_input("Hash SHA-256 do Documento / CCB", value="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-            maker_id = st.text_input("Identidade do Solicitante / Criador da Demanda (Maker)", value="engenheiro.obra@sugoisa.com.br")
-            decisao = st.selectbox("Parecer do Validador (Checker)", ["Aprovar e Liberar para Kan-sa", "Rejeitar Documento"])
-            submit_quarentena = st.form_submit_button("Despachar Auditoria em Background (HTTP 202)")
-            
-            if submit_quarentena:
-                aprovado_bool = "Aprovar" in decisao
-                headers = {"Authorization": f"Bearer {st.session_state.get('token_jwt', '')}"}
-                try:
-                    res = requests.post(
-                        f"{API_BASE_URL}/api/quarentena/validar",
-                        headers=headers,
-                        json={
-                            "hash_id_documento": hash_doc,
-                            "aprovado": aprovado_bool,
-                            "maker_identity": maker_id
-                        },
-                        timeout=5
-                    )
-                    if res.status_code == 202:
-                        retorno = res.json()
-                        st.success(f"✅ **HTTP 202 Accepted**: {retorno.get('message')}")
-                        st.info(f"🆔 **Hash em processamento:** `{retorno.get('hash_processado')}` | **Validador:** `{retorno.get('validador_sub')}`")
-                    elif res.status_code == 403:
-                        st.error(f"🛑 **403 Forbidden (Violação SoD / Privilege Escalation):** {res.json().get('detail')}")
-                    else:
-                        st.error(f"❌ Erro {res.status_code}: {res.text}")
-                except Exception as e:
-                    st.error(f"❌ Falha de comunicação com a API: {e}")
-
-    # Painel Exclusivo de Soberania Core Akagui
-    if st.session_state.paciente_perfil == "core_developer":
-        st.markdown("---")
-        st.markdown("### 👑 Soberania de Código & Governança Central (Akagui Core)")
-        st.caption("Acesso reservado exclusivamente aos desenvolvedores da plataforma Daisugi.")
-        if st.button("Consultar Cofre Central PAM-IGA (`/api/admin/core-governance`)"):
-            headers = {"Authorization": f"Bearer {st.session_state.get('token_jwt', '')}"}
-            try:
-                r_gov = requests.get(f"{API_BASE_URL}/api/admin/core-governance", headers=headers, timeout=5)
-                if r_gov.status_code == 200:
-                    st.success("🔒 Conexão Autenticada com o Cofre Central PAM-IGA!")
-                    st.json(r_gov.json())
-                else:
-                    st.error(f"Erro {r_gov.status_code}: {r_gov.text}")
-            except Exception as e:
-                st.error(f"Falha de conexão com a governança: {e}")
 
 # ----------------------------------------------------
 # TAB 3: CONTEXTO, LAUDO E COMPROVANTE VIP (QR CODE)
