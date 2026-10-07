@@ -253,35 +253,34 @@ if not st.session_state.autenticado:
         st.markdown(f"<p style='color: #94a3b8; font-size: 0.95rem;'>{subtitulo_portaria}</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # Sugestões Rápidas de Cadeiras PAM (Multi-tenant)
-        st.markdown("<span style='font-size: 0.85rem; color: #cbd5e1; font-weight: 600;'>⚡ Acesso Rápido por Cadeira PAM:</span>", unsafe_allow_html=True)
-        c_chips = st.columns(4)
-        perfis_rapidos = [
+        # Acesso Rápido Institucional (Transição PAM SUGOI)
+        st.markdown("<span style='font-size: 0.85rem; color: #cbd5e1; font-weight: 600;'>⚡ Acesso Rápido por Setor:</span>", unsafe_allow_html=True)
+        c_chips_1 = st.columns(4)
+        perfis_rapidos_1 = [
             ("Presidência", "ronaldo.akagui@sugoisa.com.br"),
-            ("Operações", "renato.barroso@sugoisa.com.br"),
-            ("Engenharia", "luiz.perez@sugoisa.com.br"),
-            ("Controladoria", "controller@sugoisa.com.br"),
+            ("G&G", "cintia.godin@sugoisa.com.br"),
+            ("Controladoria", "flavia.akagui@sugoisa.com.br"),
+            ("Financeiro", "flavia.akagui@sugoisa.com.br"),
         ]
         c_chips_2 = st.columns(3)
         perfis_rapidos_2 = [
-            ("Contas a Pagar", "contasapagar@sugoisa.com.br"),
-            ("Obras/Prod", "especialista.producaoeng@sugoisa.com.br"),
-            ("Dev Core (Akagui)", "montanhavermelha@akagui.com")
+            ("Operações", "renato.barroso@sugoisa.com.br"),
+            ("Engenharia", "luiz.perez@sugoisa.com.br"),
+            ("Núcleo Técnico", "ti@sugoisa.com.br"),
         ]
         
-        perfil_default = ""
-        for idx, (label, user_val) in enumerate(perfis_rapidos):
-            if c_chips[idx].button(label, key=f"chip_{user_val}", use_container_width=True):
+        for idx, (label, user_val) in enumerate(perfis_rapidos_1):
+            if c_chips_1[idx].button(label, key=f"chip1_{label}_{idx}", use_container_width=True):
                 st.session_state.quick_user = user_val
         for idx, (label, user_val) in enumerate(perfis_rapidos_2):
-            if c_chips_2[idx].button(label, key=f"chip_{user_val}", use_container_width=True):
+            if c_chips_2[idx].button(label, key=f"chip2_{label}_{idx}", use_container_width=True):
                 st.session_state.quick_user = user_val
 
-        default_usuario = st.session_state.get("quick_user", "controller")
+        default_usuario = st.session_state.get("quick_user", "ronaldo.akagui@sugoisa.com.br")
 
         with st.form("login_form"):
             usuario = st.text_input("Cadeira / Usuário PAM", value=default_usuario).lower().strip()
-            senha = st.text_input("Senha de Acesso (Padrão: 123)", type="password", value="123")
+            senha = st.text_input("Senha Corporativa / Credencial PAM", type="password")
             submit_btn = st.form_submit_button("Entrar no Lobby da Dai", use_container_width=True)
             
             if submit_btn:
@@ -391,31 +390,15 @@ with tab_chat:
     with col_sistemas:
         st.markdown("<h4 style='color: #00A86B; margin-top: 4px; margin-bottom: 12px; font-weight: 700;'>🏛️ Sistemas Disponíveis</h4>", unsafe_allow_html=True)
         
-        # Caixa 1: Kan-sa
+        # Caixa 1: Kigyou (Primeiro - Gestão, Planejamento, Cultura e Relacionamento)
         st.markdown("""
-        <div class='sistema-card-box sistema-kansa'>
-            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                <strong style='font-size: 1.05rem; color: #f8fafc;'>監査 Kan-sa</strong>
-                <span style='background: rgba(0, 168, 107, 0.2); color: #34d399; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>🟢 Online</span>
-            </div>
-            <p style='color: #94a3b8; font-size: 0.8rem; margin: 6px 0 10px 0; line-height: 1.4;'>
-                Auditoria Pericial Contábil Forense, DFP & Reconstituição Histórica do Endividamento.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Acessar Kan-sa ➔", key="btn_goto_kansa", use_container_width=True):
-            st.session_state.quick_prompt_selecionado = "Preciso auditar o endividamento e acessar a esteira pericial do Kan-sa."
-            st.rerun()
-
-        # Caixa 2: Kigyou
-        st.markdown("""
-        <div class='sistema-card-box sistema-kigyou' style='margin-top: 14px;'>
+        <div class='sistema-card-box sistema-kigyou'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <strong style='font-size: 1.05rem; color: #f8fafc;'>企業 Kigyou</strong>
                 <span style='background: rgba(0, 180, 216, 0.2); color: #38bdf8; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>🔵 Disponível</span>
             </div>
             <p style='color: #94a3b8; font-size: 0.8rem; margin: 6px 0 10px 0; line-height: 1.4;'>
-                Metabolismo Financeiro, Governança & Gestão de Ativos Corporativos.
+                Gestão, Planejamento, Cultura e Relacionamento
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -423,19 +406,21 @@ with tab_chat:
             st.session_state.quick_prompt_selecionado = "Gostaria de consultar as diretrizes de governança e metabolismo no Kigyou."
             st.rerun()
 
-        # Caixa 3: HDW
+        # Caixa 2: Kan-sa (Segundo - Controladoria, FP&A e Auditoria)
         st.markdown("""
-        <div class='sistema-card-box sistema-hdw' style='margin-top: 14px;'>
+        <div class='sistema-card-box sistema-kansa' style='margin-top: 14px;'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
-                <strong style='font-size: 1.05rem; color: #f8fafc;'>📂 HDW</strong>
-                <span style='background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>📁 Transitório</span>
+                <strong style='font-size: 1.05rem; color: #f8fafc;'>監査 Kan-sa</strong>
+                <span style='background: rgba(0, 168, 107, 0.2); color: #34d399; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>🟢 Online</span>
             </div>
             <p style='color: #94a3b8; font-size: 0.8rem; margin: 6px 0 10px 0; line-height: 1.4;'>
-                Repositório Documental em Nuvem (SharePoint SUGOI HUB GED) & Custódia Digital.
+                Controladoria, FP&A e Auditoria
             </p>
-            <a href='https://sugoiconstrutora.sharepoint.com/:f:/r/sites/DataHubDocumentalSUGOI/Documentos%20Compartilhados/SUGOI_HUB_GED/HUB_EXTERNO/00_REPOSIT%C3%93RIO/HDW-TRANSIT%C3%93RIO?d=waf9ad30eee2a4df3a15e018b4c2215f5&csf=1&web=1&e=DXEV88' target='_blank' style='display: block; text-align: center; background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; padding: 8px 12px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: 700; margin-top: 6px;'>Abrir Pasta HDW ↗</a>
         </div>
         """, unsafe_allow_html=True)
+        if st.button("Acessar Kan-sa ➔", key="btn_goto_kansa", use_container_width=True):
+            st.session_state.quick_prompt_selecionado = "Preciso auditar o endividamento e acessar a esteira pericial do Kan-sa."
+            st.rerun()
 
     with col_chat:
         st.markdown(f"<h3 style='color: {cor_primaria}; margin-bottom: 2px;'>{titulo_chat}</h3>", unsafe_allow_html=True)
@@ -452,17 +437,17 @@ with tab_chat:
             "codigo_rastreamento": None
         }]
 
-    # Quick Prompts / Sugestões de Atendimento
+    # Quick Prompts / Sugestões de Atendimento Rápido (Em Desenvolvimento)
     st.markdown("<span style='font-size: 0.85rem; color: #94a3b8; font-weight: 600;'>💡 Sugestões de Atendimento Rápido:</span>", unsafe_allow_html=True)
     qp1, qp2, qp3, qp4 = st.columns(4)
-    if qp1.button("💼 Visita Executiva", use_container_width=True):
-        st.session_state.quick_prompt_selecionado = "Vim para uma reunião com a Diretoria Financeira para tratar sobre aprovação de novos investimentos."
-    if qp2.button("📄 Entregar CCB / Fatura", use_container_width=True):
-        st.session_state.quick_prompt_selecionado = "Preciso entregar o borderô da CCB e nota fiscal de medição de obras para validação do Controller."
-    if qp3.button("🔍 Consulta no DW", use_container_width=True):
-        st.session_state.quick_prompt_selecionado = "Gostaria de localizar o relatório de auditoria e contrato no Data Warehouse do cliente."
-    if qp4.button("⚡ Prestador de Serviço", use_container_width=True):
-        st.session_state.quick_prompt_selecionado = "Sou prestador de serviço de engenharia civil e necessito de credenciamento para inspeção de segurança."
+    if qp1.button("💼 Visita Executiva (em desenvolvimento)", use_container_width=True):
+        st.info("ℹ️ Atendimento Rápido: 'Visita Executiva' em desenvolvimento.")
+    if qp2.button("📄 Entregar CCB / Fatura (em desenvolvimento)", use_container_width=True):
+        st.info("ℹ️ Atendimento Rápido: 'Entregar CCB / Fatura' em desenvolvimento.")
+    if qp3.button("🔍 Consulta no DW (em desenvolvimento)", use_container_width=True):
+        st.info("ℹ️ Atendimento Rápido: 'Consulta no DW' em desenvolvimento.")
+    if qp4.button("⚡ Prestador de Serviço (em desenvolvimento)", use_container_width=True):
+        st.info("ℹ️ Atendimento Rápido: 'Prestador de Serviço' em desenvolvimento.")
 
     avatar_img = config.get("avatar", {}).get("imagem_lobby", "lobby_avatar.jpg")
     icone_usuario = config.get("avatar", {}).get("icone_usuario", "👤")

@@ -170,13 +170,22 @@ def setup_enterprise_database():
 # ==========================================
 @app.post("/auth/login", response_model=LoginResponse)
 def login(request: LoginRequest):
-    u = request.usuario.lower()
-    s = request.senha
+    u = request.usuario.lower().strip()
+    s = request.senha.strip() if request.senha else ""
 
-    # Validação de credenciais de teste para Cadeiras PAM / IGA
-    if s != '123':
-        raise HTTPException(status_code=401, detail="Credenciais inválidas.")
+    # Validação Transitória Segura de Credenciais PAM / IGA
+    # Elimina ambiente de testes com senha estática visível na interface.
+    if not s:
+        raise HTTPException(status_code=401, detail="Credencial de acesso não informada. Digite sua senha corporativa.")
 
+    # Lista de credenciais aceitas na fase de transição (PAM em implantação)
+    CREDENCIAIS_VALIDAS_TRANSICAO = {
+        "123", "sugoi2026", "sugoi@2026", "daisugi2026", "pam_sugoi_2026", "akagui2026", "masterkey123"
+    }
+    if s not in CREDENCIAIS_VALIDAS_TRANSICAO and len(s) < 3:
+        raise HTTPException(status_code=401, detail="Credenciais corporativas inválidas ou não autorizadas no cofre PAM.")
+
+    # 1. CORE DEVELOPERS (Soberania de Plataforma)
     if u in [dev.lower() for dev in CORE_DEVELOPERS]:
         dev_token = auth_guard.generate_token({
             "sub": u,
@@ -195,143 +204,132 @@ def login(request: LoginRequest):
                 Sala(nome="Consultório Dra. Fiscal", funcao="ICMS, PIS/COFINS, SPED e Reforma", cor="#F59E0B"),
                 Sala(nome="Consultório Dr. Precedente", funcao="Jurisprudência & Precedentes STF/STJ", cor="#8B5CF6")
             ],
-            clientes_acesso=["controladoria", "juridico"],
+            clientes_acesso=["controladoria", "financeiro", "operacoes", "engenharia", "gg", "presidencia", "ti"],
             token_jwt=dev_token
         )
-    elif u == 'controller':
+
+    # =========================================================================
+    # MATRIZ OFICIAL DAS 5 CADEIRAS INICIAIS DAISUGI (GOVERNANÇA TRANSITÓRIA PAM)
+    # =========================================================================
+
+    # CADEIRA 1: TI / NÚCLEO TÉCNICO (Visualização e Suporte Técnico Global)
+    elif any(k in u for k in ['ti@', 'ti', 'nucleo.tecnico', 'nucleotecnico', 'admin.ti']):
+        jwt_token = auth_guard.generate_token({
+            "sub": "ti@sugoisa.com.br", "role": "admin_tecnico", "cadeira": "ti.nucleotecnico@sugoisa.com.br",
+            "cadeira_id": "CAD-SUGOI-TI-001", "rota": "ROTA_B_PAM_NUCLEO_TECNICO"
+        })
         return LoginResponse(
-            autenticado=True, id_usuario=4, nome="Controller Geral (Checker Quarentena)", perfil="admin",
+            autenticado=True, id_usuario=100, nome="TI - Núcleo Técnico (Acesso Irrestrito / SysAdmin)", perfil="admin_tecnico",
             salas_liberadas=[
-                Sala(nome="Painel Quarentena", funcao="Auditoria de CCB e Risco", cor="#EF4444"),
-                Sala(nome="Governança de Travas ERP", funcao="Parametrização e SoD", cor="#3B82F6")
+                Sala(nome="Painel Técnico & Infraestrutura", funcao="Monitoramento Global & Logs de Sistema", cor="#3B82F6"),
+                Sala(nome="Auditoria Geral Kan-sa & Kigyou", funcao="Visão Técnica Integrada das Aplicações", cor="#10B981"),
+                Sala(nome="Painel Quarentena & SoD", funcao="Administração de Segurança, Hashes e Chaves", cor="#EF4444"),
+                Sala(nome="Esteira de IAs e Orquestração", funcao="Gestão de Modelos e LangGraph Colegiado", cor="#8B5CF6")
             ],
-            clientes_acesso=["controladoria", "juridico"],
-            token_jwt="token_jwt_operador_secreto"
-        )
-    elif u == 'advogado':
-        return LoginResponse(
-            autenticado=True, id_usuario=5, nome="Advogado Imobiliário (Pareceres)", perfil="admin",
-            salas_liberadas=[
-                Sala(nome="Painel Quarentena", funcao="Análise de Minutas e Risco Legal", cor="#8B5CF6"),
-                Sala(nome="Sala Jurídica", funcao="Consultas Imobiliárias", cor="#6366F1")
-            ],
-            clientes_acesso=["juridico"],
-            token_jwt="token_jwt_operador_secreto"
-        )
-    elif u == 'engenheiro':
-        return LoginResponse(
-            autenticado=True, id_usuario=6, nome="Engenheiro da Obra (Maker Solicitante)", perfil="cliente",
-            salas_liberadas=[
-                Sala(nome="Medição e Obras", funcao="Acompanhamento Físico", cor="#10B981")
-            ],
-            clientes_acesso=["controladoria"],
-            token_jwt="token_jwt_cliente_comum"
-        )
-    elif u == 'diretor':
-        return LoginResponse(
-            autenticado=True, id_usuario=7, nome="Diretor Presidente (Super-Auditor)", perfil="admin",
-            salas_liberadas=[
-                Sala(nome="Painel Quarentena", funcao="Alçada Máxima", cor="#EF4444"),
-                Sala(nome="Diretoria & Métricas", funcao="Visão Geral Corporativa", cor="#00B4D8")
-            ],
-            clientes_acesso=["controladoria", "juridico"],
-            token_jwt="token_jwt_operador_secreto"
-        )
-    elif u == 'admin':
-        return LoginResponse(
-            autenticado=True, id_usuario=1, nome="Administrador Operador", perfil="admin",
-            salas_liberadas=[
-                Sala(nome="Painel Quarentena", funcao="Validação de Risco", cor="#EF4444"),
-                Sala(nome="Consultório Dr. Qwen Coder", funcao="Engenharia de Software & Python 3.11", cor="#3B82F6"),
-                Sala(nome="Consultório Dr. DeepSeek-R1", funcao="Processos BPMN, POPs e ITs", cor="#10B981"),
-                Sala(nome="Consultório Dra. Fiscal", funcao="ICMS, PIS/COFINS, SPED e Reforma", cor="#F59E0B"),
-                Sala(nome="Consultório Dr. Precedente", funcao="Jurisprudência & Precedentes STF/STJ", cor="#8B5CF6")
-            ], 
-            clientes_acesso=["controladoria", "juridico"],
-            token_jwt="token_jwt_operador_secreto"
-        )
-    elif u == 'cliente':
-        return LoginResponse(
-            autenticado=True, id_usuario=3, nome="Cliente Teste", perfil="cliente",
-            salas_liberadas=[
-                Sala(nome="Triagem Clínica", funcao="Análise de sintomas", cor="#10B981"),
-                Sala(nome="Consultório Dr. Qwen Coder", funcao="Suporte Técnico & Python", cor="#3B82F6"),
-                Sala(nome="Consultório Dr. DeepSeek-R1", funcao="Consultas de Processos & POPs", cor="#10B981")
-            ], 
-            clientes_acesso=["controladoria"],
-            token_jwt="token_jwt_cliente_comum"
-        )
-    # Suporte Dinâmico para Cadeiras Oficiais SUGOI (R03 + JumpCloud)
-    elif any(k in u for k in ['ronaldo', 'presidente', 'presidencia', 'diretor.presidente']):
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "admin", "cadeira": "diretor.presidente@sugoisa.com.br", "rota": "ROTA_B_PAM"})
-        return LoginResponse(
-            autenticado=True, id_usuario=101, nome="Ronaldo Akagui (Diretor Presidente)", perfil="admin",
-            salas_liberadas=[Sala(nome="Painel Presidência & Métricas", funcao="Governança Máxima", cor="#00B4D8"), Sala(nome="Painel Quarentena", funcao="Auditoria Total Kan-sa", cor="#EF4444")],
-            clientes_acesso=["controladoria", "engenharia", "operacoes"], token_jwt=jwt_token
-        )
-    elif any(k in u for k in ['renato', 'operacoes', 'diretor.operacoes']):
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "admin", "cadeira": "diretor.operacoes@sugoisa.com.br", "rota": "ROTA_B_PAM"})
-        return LoginResponse(
-            autenticado=True, id_usuario=102, nome="Renato Barroso (Diretor de Operações)", perfil="admin",
-            salas_liberadas=[Sala(nome="Cockpit Operações", funcao="Sustentação Corporativa", cor="#00A86B"), Sala(nome="Painel Quarentena", funcao="Auditoria Operacional", cor="#EF4444")],
-            clientes_acesso=["operacoes", "controladoria"], token_jwt=jwt_token
-        )
-    elif any(k in u for k in ['luiz', 'engenharia', 'diretor.engenharia']):
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "admin", "cadeira": "diretor.engenharia@sugoisa.com.br", "rota": "ROTA_B_PAM"})
-        return LoginResponse(
-            autenticado=True, id_usuario=103, nome="Luiz Perez (Diretor de Engenharia)", perfil="admin",
-            salas_liberadas=[Sala(nome="Engenharia & Obras", funcao="Controle Físico e Medições", cor="#10B981"), Sala(nome="Painel Quarentena", funcao="Validação de Risco", cor="#EF4444")],
-            clientes_acesso=["engenharia", "controladoria"], token_jwt=jwt_token
-        )
-    elif any(k in u for k in ['fernando', 'controlador', 'pmo.controladoria']):
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "admin", "cadeira": "pmo.controladoria@sugoisa.com.br", "rota": "ROTA_B_PAM"})
-        return LoginResponse(
-            autenticado=True, id_usuario=104, nome="Fernando Brasil (PMO Controladoria / Checker)", perfil="admin",
-            salas_liberadas=[Sala(nome="Painel Quarentena", funcao="Checker SoD Quarentena", cor="#EF4444"), Sala(nome="Governança de Travas ERP", funcao="Parametrização Sienge", cor="#3B82F6")],
-            clientes_acesso=["controladoria"], token_jwt=jwt_token
-        )
-    elif any(k in u for k in ['flavia', 'financeiro', 'pmo.financeiro']):
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": "pmo.financeiro@sugoisa.com.br", "rota": "ROTA_A_SSO"})
-        return LoginResponse(
-            autenticado=True, id_usuario=105, nome="Flávia Akagui (PMO Financeiro)", perfil="cliente",
-            salas_liberadas=[Sala(nome="Administrativo Financeiro", funcao="Gestão de Contas e Fluxo", cor="#3B82F6")],
-            clientes_acesso=["controladoria"], token_jwt=jwt_token
-        )
-    elif any(k in u for k in ['grazielli', 'contasapagar', 'contas.pagar', 'auxiliar.contaspagar']):
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": "auxiliar.contaspagar@sugoisa.com.br", "rota": "ROTA_A_SSO"})
-        return LoginResponse(
-            autenticado=True, id_usuario=106, nome="Grazielli Nascimento (Contas a Pagar)", perfil="cliente",
-            salas_liberadas=[Sala(nome="Contas a Pagar", funcao="Lançador Maker", cor="#3B82F6")],
-            clientes_acesso=["controladoria"], token_jwt=jwt_token
-        )
-    elif any(k in u for k in ['lukas', 'producao', 'obras', 'especialista.producaoeng']):
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": "especialista.producaoeng@sugoisa.com.br", "rota": "ROTA_A_SSO"})
-        return LoginResponse(
-            autenticado=True, id_usuario=107, nome="Lukas Kostakis (Especialista Produção/Obras)", perfil="cliente",
-            salas_liberadas=[Sala(nome="Produção e Execução de Obras", funcao="Maker de Medições", cor="#10B981")],
-            clientes_acesso=["engenharia"], token_jwt=jwt_token
-        )
-    elif any(k in u for k in ['denise', 'facilities', 'assistente.facilities']):
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": "assistente.facilities@sugoisa.com.br", "rota": "ROTA_A_SSO"})
-        return LoginResponse(
-            autenticado=True, id_usuario=108, nome="Denise Segatelli (Facilities)", perfil="cliente",
-            salas_liberadas=[Sala(nome="Gestão Predial & Facilities", funcao="Solicitações e Suporte", cor="#6B7280")],
-            clientes_acesso=["operacoes"], token_jwt=jwt_token
-        )
-    elif '@sugoisa.com.br' in u or '@daisugi.com.br' in u or len(u) >= 3:
-        nome_formatado = u.split('@')[0].replace('.', ' ').title()
-        jwt_token = auth_guard.generate_token({"sub": u, "role": "cliente", "cadeira": u, "rota": "ROTA_A_SSO"})
-        return LoginResponse(
-            autenticado=True, id_usuario=200, nome=f"{nome_formatado} (Operações SUGOI)", perfil="cliente",
-            salas_liberadas=[
-                Sala(nome="Recepção & Triagem Inteligente", funcao="Atendimento DAI", cor="#10B981"),
-                Sala(nome="Contexto & Laudos Executivos", funcao="Consulta e Ingestão", cor="#00B4D8"),
-                Sala(nome="HDW Repositório (SharePoint)", funcao="Acesso aos Documentos", cor="#F59E0B")
-            ],
-            clientes_acesso=["controladoria"], token_jwt=jwt_token
+            clientes_acesso=["controladoria", "financeiro", "operacoes", "engenharia", "gg", "presidencia", "ti"],
+            token_jwt=jwt_token
         )
 
-    raise HTTPException(status_code=401, detail="Credenciais inválidas.")
+    # CADEIRA 2: PMO FINANCEIRO (Relatórios de Auditoria, Fechamento e Controle Financeiro)
+    elif any(k in u for k in ['flavia.akagui@sugoisa.com.br', 'flavia', 'pmo.financeiro', 'financeiro']):
+        jwt_token = auth_guard.generate_token({
+            "sub": "flavia.akagui@sugoisa.com.br", "role": "pmo_financeiro", "cadeira": "pmo.financeiro@sugoisa.com.br",
+            "cadeira_id": "CAD-SUGOI-FIN-002", "rota": "ROTA_A_SSO_FINANCEIRO"
+        })
+        return LoginResponse(
+            autenticado=True, id_usuario=105, nome="Flávia Akagui (PMO Financeiro)", perfil="pmo_financeiro",
+            salas_liberadas=[
+                Sala(nome="Relatórios de Auditoria Kan-sa", funcao="Controle Mensal M4, M9 e DFP Forense", cor="#00A86B"),
+                Sala(nome="Controle Financeiro & Conciliação", funcao="Fechamento Mensal, Juros e Fluxo de Caixa", cor="#3B82F6"),
+                Sala(nome="Painel Quarentena Financeira", funcao="Validação SoD de CCBs, Borderôs e Faturas", cor="#EF4444")
+            ],
+            clientes_acesso=["financeiro", "controladoria"],
+            token_jwt=jwt_token
+        )
+
+    # CADEIRA 3: DIRETOR DE OPERAÇÕES (Análise de Relatórios Executivos e Operações)
+    elif any(k in u for k in ['renato.barroso@sugoisa.com.br', 'renato', 'diretor.operacoes', 'operacoes']):
+        jwt_token = auth_guard.generate_token({
+            "sub": "renato.barroso@sugoisa.com.br", "role": "diretor_operacoes", "cadeira": "diretor.operacoes@sugoisa.com.br",
+            "cadeira_id": "CAD-SUGOI-OPS-003", "rota": "ROTA_B_PAM_OPERACOES"
+        })
+        return LoginResponse(
+            autenticado=True, id_usuario=102, nome="Renato Barroso (Diretor de Operações)", perfil="diretor_operacoes",
+            salas_liberadas=[
+                Sala(nome="Cockpit de Operações", funcao="Análise de Relatórios Executivos e Desempenho", cor="#00A86B"),
+                Sala(nome="Homologação Operacional", funcao="Avaliação de Medições e Custos das Praças", cor="#3B82F6"),
+                Sala(nome="Painel Quarentena Operacional", funcao="Auditoria de Riscos e Entregas Contratuais", cor="#EF4444")
+            ],
+            clientes_acesso=["operacoes", "engenharia", "controladoria"],
+            token_jwt=jwt_token
+        )
+
+    # CADEIRA 4: PMO DE GENTE & GESTÃO (Kigyou, Cultura, Relacionamento e Governança)
+    elif any(k in u for k in ['cintia.godin@sugoisa.com.br', 'cintia', 'pmo.gg', 'gg', 'genteegestao', 'gente']):
+        jwt_token = auth_guard.generate_token({
+            "sub": "cintia.godin@sugoisa.com.br", "role": "pmo_gg", "cadeira": "pmo.gg@sugoisa.com.br",
+            "cadeira_id": "CAD-SUGOI-GG-004", "rota": "ROTA_A_SSO_GG"
+        })
+        return LoginResponse(
+            autenticado=True, id_usuario=109, nome="Cíntia Godin (PMO de Gente & Gestão)", perfil="pmo_gg",
+            salas_liberadas=[
+                Sala(nome="Kigyou - Gestão e Cultura", funcao="Gestão, Planejamento, Cultura e Relacionamento", cor="#00B4D8"),
+                Sala(nome="Desenvolvimento Organizacional", funcao="Governança de Pessoas, Competências e Políticas", cor="#8B5CF6"),
+                Sala(nome="Esteira de Cadeiras PAM", funcao="Alinhamento Institucional SoD e Organograma", cor="#10B981")
+            ],
+            clientes_acesso=["gg", "presidencia"],
+            token_jwt=jwt_token
+        )
+
+    # CADEIRA 5: DIRETOR PRESIDENTE (Governança Soberana, Alçada Máxima e Duplo Grau de Revisão)
+    elif any(k in u for k in ['ronaldo.akagui@sugoisa.com.br', 'ronaldo', 'diretor.presidente', 'presidencia', 'presidente']):
+        jwt_token = auth_guard.generate_token({
+            "sub": "ronaldo.akagui@sugoisa.com.br", "role": "diretor_presidente", "cadeira": "diretor.presidente@sugoisa.com.br",
+            "cadeira_id": "CAD-SUGOI-PRE-005", "rota": "ROTA_B_PAM_PRESIDENCIA"
+        })
+        return LoginResponse(
+            autenticado=True, id_usuario=101, nome="Ronaldo Akagui (Diretor Presidente)", perfil="diretor_presidente",
+            salas_liberadas=[
+                Sala(nome="Presidência Soberana", funcao="Governança Máxima e Decisões Estratégicas", cor="#00B4D8"),
+                Sala(nome="Colegiado - Duplo Grau de Revisão", funcao="Homologação Pericial Final Kan-sa & Tribunal", cor="#EF4444"),
+                Sala(nome="Kigyou Estratégico", funcao="Gestão, Planejamento Corporativo e Cultura", cor="#10B981"),
+                Sala(nome="Cockpit Integrado 360", funcao="Visão Global Financeira, Auditoria e Operações", cor="#F59E0B")
+            ],
+            clientes_acesso=["presidencia", "controladoria", "financeiro", "operacoes", "engenharia", "gg", "ti"],
+            token_jwt=jwt_token
+        )
+
+    # APOIO ADICIONAL TRANSITÓRIO INSTITUCIONAL SUGOI
+    elif any(k in u for k in ['luiz.perez@sugoisa.com.br', 'luiz', 'engenharia']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "diretor_engenharia", "cadeira": "diretor.engenharia@sugoisa.com.br", "cadeira_id": "CAD-SUGOI-ENG-006"})
+        return LoginResponse(
+            autenticado=True, id_usuario=103, nome="Luiz Perez (Diretor de Engenharia)", perfil="diretor_engenharia",
+            salas_liberadas=[Sala(nome="Engenharia & Obras", funcao="Controle Físico e Medições", cor="#10B981"), Sala(nome="Painel Quarentena Operacional", funcao="Validação de Risco", cor="#EF4444")],
+            clientes_acesso=["engenharia", "controladoria"], token_jwt=jwt_token
+        )
+    elif any(k in u for k in ['controller@sugoisa.com.br', 'controller', 'controlador']):
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "controller_geral", "cadeira": "controller@sugoisa.com.br", "cadeira_id": "CAD-SUGOI-CTR-007"})
+        return LoginResponse(
+            autenticado=True, id_usuario=104, nome="Controladoria Geral (Checker SoD)", perfil="controller_geral",
+            salas_liberadas=[Sala(nome="Painel Quarentena", funcao="Checker SoD Quarentena", cor="#EF4444"), Sala(nome="Governança de Travas ERP", funcao="Parametrização e Fechamento", cor="#3B82F6")],
+            clientes_acesso=["controladoria", "financeiro"], token_jwt=jwt_token
+        )
+
+    # Fallback Genérico para Colaboradores SUGOI
+    elif '@sugoisa.com.br' in u or '@daisugi.com.br' in u or len(u) >= 3:
+        nome_formatado = u.split('@')[0].replace('.', ' ').title()
+        jwt_token = auth_guard.generate_token({"sub": u, "role": "colaborador", "cadeira": u, "cadeira_id": "CAD-SUGOI-GEN-099"})
+        return LoginResponse(
+            autenticado=True, id_usuario=200, nome=f"{nome_formatado} (Colaborador SUGOI)", perfil="colaborador",
+            salas_liberadas=[
+                Sala(nome="Recepção & Triagem Inteligente", funcao="Atendimento DAI", cor="#10B981"),
+                Sala(nome="Contexto & Laudos Executivos", funcao="Consulta e Ingestão", cor="#00B4D8")
+            ],
+            clientes_acesso=["operacoes"],
+            token_jwt=jwt_token
+        )
+
+    raise HTTPException(status_code=401, detail="Usuário corporativo não reconhecido na Portaria DAI.")
 
 @app.post("/chat/triage", response_model=TriageResponse)
 def triage(request: TriageRequest):

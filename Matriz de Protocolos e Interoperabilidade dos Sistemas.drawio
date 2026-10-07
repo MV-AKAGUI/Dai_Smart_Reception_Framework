@@ -1,0 +1,178 @@
+<mxfile host="Electron">
+  <diagram name="Página-1" id="qfId-9R_BphOyrnTXbFP">
+    <mxGraphModel dx="1693" dy="1020" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="" mermaidData="{&#xa;  &quot;data&quot;: &quot;flowchart TD\n    subgraph CLIENT[\&quot;👤 Cliente / Usuário (SUGOI S.A.)\&quot;]\n        BROWSER[\&quot;Web Browser / Mobile&lt;br/&gt;(http://localhost:8501 ou Oracle HTTPS)\&quot;]\n    end\n\n    subgraph FRONT[\&quot;🌸 DAI (Smart Reception Framework)\&quot;]\n        DAI_UI[\&quot;DAI Interface Conversacional&lt;br/&gt;(Identity SUGOI • Laranja #F05A22 • Logo)\&quot;]\n        PAM[\&quot;Cofre PAM &amp; Sessão RFC 8785&lt;br/&gt;(suporte.ti@sugoisa.com.br)\&quot;]\n    end\n\n    subgraph ENGINE[\&quot;🌲 KAN-SA v3.0 (Cérebro Pericial)\&quot;]\n        M4[\&quot;Submódulo M4: Controle Mensal 2024\&quot;]\n        M9[\&quot;Submódulo M9: Auditoria DFP 2025\&quot;]\n        HARNESS[\&quot;Test Harness Determinístico (Tolerância R$ 0,00)\&quot;]\n        DS[\&quot;Ciência de Dados (4 Quadrantes + Plotly)\&quot;]\n    end\n\n    subgraph REPOSITORIOS[\&quot;📁 Repositórios e Armazenamento Imutável\&quot;]\n        HDW[\&quot;HDW-TRANSITÓRIO (SharePoint SUGOI)&lt;br/&gt;Laudos HTML • JSONs • IT-HDW\&quot;]\n        HDC[\&quot;🤖 HDC / HUDSON Core (Porta 9000)&lt;br/&gt;Event Hub • Hashing RFC 8785 • Custódia CAS\&quot;]\n    end\n\n    subgraph OCI[\&quot;☁️ Servidor Oracle (OCI: 137.131.151.74)\&quot;]\n        ORACLE_GATEWAY[\&quot;Proxy Reverso TLS 1.3 (Portas 80/443)&lt;br/&gt;https://dai.137.131.151.74.sslip.io\&quot;]\n    end\n\n    BROWSER &lt;--&gt;|HTTP / HTTPS| DAI_UI\n    DAI_UI &lt;--&gt;|Sessão Autenticada| PAM\n    DAI_UI --&gt;|Roteamento Lexical| M4\n    DAI_UI --&gt;|Roteamento Lexical| M9\n    M4 --&gt; HARNESS\n    HARNESS --&gt; DS\n    DS --&gt;|Gera Artefatos Standalone| HDW\n    HARNESS --&gt;|Ingestão &amp; Manifesto CAS| HDC\n    ORACLE_GATEWAY &lt;--&gt;|Hospeda e Protege| DAI_UI\n&quot;,&#xa;  &quot;config&quot;: null&#xa;}" id="l41POmjc2LomiuPZaepg-1">
+          <mxCell connectable="0" parent="1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;" vertex="1">
+            <mxGeometry as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="👤 Cliente / Usuário (SUGOI S.A.)" mermaidId="n:CLIENT" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="👤 Cliente / Usuário (SUGOI S.A.)" id="l41POmjc2LomiuPZaepg-2">
+          <mxCell parent="l41POmjc2LomiuPZaepg-1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="143" width="423" x="1429" y="30" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Web Browser / Mobile&#xa;(http://localhost:8501 ou Oracle HTTPS)" mermaidId="n:BROWSER" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Web Browser / Mobile&#xa;(http://localhost:8501 ou Oracle HTTPS)" id="l41POmjc2LomiuPZaepg-3">
+          <mxCell parent="l41POmjc2LomiuPZaepg-2" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="353" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="🌸 DAI (Smart Reception Framework)" mermaidId="n:FRONT" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="🌸 DAI (Smart Reception Framework)" id="l41POmjc2LomiuPZaepg-4">
+          <mxCell parent="l41POmjc2LomiuPZaepg-1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="310" width="572" x="1207" y="222" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="DAI Interface Conversacional&#xa;(Identity SUGOI • Laranja #F05A22 • Logo)" mermaidId="n:DAI_UI" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="DAI Interface Conversacional&#xa;(Identity SUGOI • Laranja #F05A22 • Logo)" id="l41POmjc2LomiuPZaepg-5">
+          <mxCell parent="l41POmjc2LomiuPZaepg-4" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="365" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Cofre PAM &amp; Sessão RFC 8785&#xa;(suporte.ti@sugoisa.com.br)" mermaidId="n:PAM" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Cofre PAM &amp; Sessão RFC 8785&#xa;(suporte.ti@sugoisa.com.br)" id="l41POmjc2LomiuPZaepg-6">
+          <mxCell parent="l41POmjc2LomiuPZaepg-4" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="270" x="267" y="212" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Sessão Autenticada" mermaidId="e:DAI_UI-&gt;PAM#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.76;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="Sessão Autenticada" id="l41POmjc2LomiuPZaepg-7">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-4" source="l41POmjc2LomiuPZaepg-5" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.76;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="l41POmjc2LomiuPZaepg-6">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="402" y="153" />
+                <mxPoint x="402" y="187" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="🌲 KAN-SA v3.0 (Cérebro Pericial)" mermaidId="n:ENGINE" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="🌲 KAN-SA v3.0 (Cérebro Pericial)" id="l41POmjc2LomiuPZaepg-8">
+          <mxCell parent="l41POmjc2LomiuPZaepg-1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="366" width="1026" x="30" y="399" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Submódulo M4: Controle Mensal 2024" mermaidId="n:M4" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Submódulo M4: Controle Mensal 2024" id="l41POmjc2LomiuPZaepg-9">
+          <mxCell parent="l41POmjc2LomiuPZaepg-8" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="327" x="393" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Submódulo M9: Auditoria DFP 2025" mermaidId="n:M9" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Submódulo M9: Auditoria DFP 2025" id="l41POmjc2LomiuPZaepg-10">
+          <mxCell parent="l41POmjc2LomiuPZaepg-8" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="308" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Test Harness Determinístico (Tolerância R$ 0,00)" mermaidId="n:HARNESS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Test Harness Determinístico (Tolerância R$ 0,00)" id="l41POmjc2LomiuPZaepg-11">
+          <mxCell parent="l41POmjc2LomiuPZaepg-8" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="407" x="353" y="183" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Ciência de Dados (4 Quadrantes + Plotly)" mermaidId="n:DS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Ciência de Dados (4 Quadrantes + Plotly)" id="l41POmjc2LomiuPZaepg-12">
+          <mxCell parent="l41POmjc2LomiuPZaepg-8" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="54" width="353" x="638" y="287" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:M4-&gt;HARNESS#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="" id="l41POmjc2LomiuPZaepg-13">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-8" source="l41POmjc2LomiuPZaepg-9" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="l41POmjc2LomiuPZaepg-11">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:HARNESS-&gt;DS#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.83;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="" id="l41POmjc2LomiuPZaepg-14">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-8" source="l41POmjc2LomiuPZaepg-11" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=0.83;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="l41POmjc2LomiuPZaepg-12">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="814" y="262" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="📁 Repositórios e Armazenamento Imutável" mermaidId="n:REPOSITORIOS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="📁 Repositórios e Armazenamento Imutável" id="l41POmjc2LomiuPZaepg-15">
+          <mxCell parent="l41POmjc2LomiuPZaepg-1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="143" width="843" x="204" y="814" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="HDW-TRANSITÓRIO (SharePoint SUGOI)&#xa;Laudos HTML • JSONs • IT-HDW" mermaidId="n:HDW" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="HDW-TRANSITÓRIO (SharePoint SUGOI)&#xa;Laudos HTML • JSONs • IT-HDW" id="l41POmjc2LomiuPZaepg-16">
+          <mxCell parent="l41POmjc2LomiuPZaepg-15" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="335" x="473" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="🤖 HDC / HUDSON Core (Porta 9000)&#xa;Event Hub • Hashing RFC 8785 • Custódia CAS" mermaidId="n:HDC" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="🤖 HDC / HUDSON Core (Porta 9000)&#xa;Event Hub • Hashing RFC 8785 • Custódia CAS" id="l41POmjc2LomiuPZaepg-17">
+          <mxCell parent="l41POmjc2LomiuPZaepg-15" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="388" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="☁️ Servidor Oracle (OCI: 137.131.151.74)" mermaidId="n:OCI" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="☁️ Servidor Oracle (OCI: 137.131.151.74)" id="l41POmjc2LomiuPZaepg-18">
+          <mxCell parent="l41POmjc2LomiuPZaepg-1" style="html=1;whiteSpace=wrap;strokeWidth=1;verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="143" width="402" x="1007" y="30" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Proxy Reverso TLS 1.3 (Portas 80/443)&#xa;https://dai.137.131.151.74.sslip.io" mermaidId="n:ORACLE_GATEWAY" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="Proxy Reverso TLS 1.3 (Portas 80/443)&#xa;https://dai.137.131.151.74.sslip.io" id="l41POmjc2LomiuPZaepg-19">
+          <mxCell parent="l41POmjc2LomiuPZaepg-18" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=light-dark(#ECECFF,#1f2020);strokeColor=light-dark(#9370DB,#cccccc);fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
+            <mxGeometry height="73" width="332" x="35" y="45" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="HTTP / HTTPS" mermaidId="e:BROWSER-&gt;DAI_UI#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.85;entryY=0;" mermaidBaseValue="HTTP / HTTPS" id="l41POmjc2LomiuPZaepg-20">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-1" source="l41POmjc2LomiuPZaepg-3" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.85;entryY=0;rounded=0;" target="l41POmjc2LomiuPZaepg-5">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1641" y="173" />
+                <mxPoint x="1641" y="208" />
+                <mxPoint x="1641" y="242" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Roteamento Lexical" mermaidId="e:DAI_UI-&gt;M4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.45;exitY=1;entryX=1;entryY=0.26;" mermaidBaseValue="Roteamento Lexical" id="l41POmjc2LomiuPZaepg-21">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-1" source="l41POmjc2LomiuPZaepg-5" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.45;exitY=1;entryX=1;entryY=0.26;rounded=0;" target="l41POmjc2LomiuPZaepg-9">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1386" y="375" />
+                <mxPoint x="1386" y="409" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Roteamento Lexical" mermaidId="e:DAI_UI-&gt;M9#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.16;exitY=1;entryX=1;entryY=0.31;" mermaidBaseValue="Roteamento Lexical" id="l41POmjc2LomiuPZaepg-22">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-1" source="l41POmjc2LomiuPZaepg-5" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.16;exitY=1;entryX=1;entryY=0.31;rounded=0;" target="l41POmjc2LomiuPZaepg-10">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1180" y="375" />
+                <mxPoint x="1180" y="409" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Gera Artefatos Standalone" mermaidId="e:DS-&gt;HDW#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="Gera Artefatos Standalone" id="l41POmjc2LomiuPZaepg-23">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-1" source="l41POmjc2LomiuPZaepg-12" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="l41POmjc2LomiuPZaepg-16">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Ingestão &amp; Manifesto CAS" mermaidId="e:HARNESS-&gt;HDC#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.3;exitY=1;entryX=0.5;entryY=0;" mermaidBaseValue="Ingestão &amp; Manifesto CAS" id="l41POmjc2LomiuPZaepg-24">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-1" source="l41POmjc2LomiuPZaepg-11" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.3;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="l41POmjc2LomiuPZaepg-17">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="433" y="661" />
+                <mxPoint x="433" y="713" />
+                <mxPoint x="433" y="765" />
+                <mxPoint x="433" y="800" />
+                <mxPoint x="433" y="834" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Hospeda e Protege" mermaidId="e:ORACLE_GATEWAY-&gt;DAI_UI#0" mermaidBaseStyle="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.15;entryY=0;" mermaidBaseValue="Hospeda e Protege" id="l41POmjc2LomiuPZaepg-25">
+          <mxCell edge="1" parent="l41POmjc2LomiuPZaepg-1" source="l41POmjc2LomiuPZaepg-19" style="curved=1;startArrow=block;startSize=7;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);html=1;fontSize=16;labelBackgroundColor=light-dark(#E8E8E88D,#2a2a2a8D);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontColor=light-dark(#333333,#cccccc);exitX=0.5;exitY=1;entryX=0.15;entryY=0;rounded=0;" target="l41POmjc2LomiuPZaepg-5">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="1208" y="173" />
+                <mxPoint x="1208" y="208" />
+                <mxPoint x="1208" y="242" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
