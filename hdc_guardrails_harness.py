@@ -74,8 +74,6 @@ class HarnessVerdict(BaseModel):
     motivo: str = "VALIDADO"
     wbs_autorizado: Optional[str] = None
     nivel_sigilo: str = "PUBLICO"
-    requer_protocolo_3_perguntas: bool = False
-    perguntas_refinamento: Optional[List[str]] = None
 
 
 class HdcGuardrailsHarness:
@@ -150,23 +148,6 @@ class HdcGuardrailsHarness:
                 return True
         return False
 
-    def avaliar_ambiguidade_fuzzy(self, prompt: str) -> Optional[List[str]]:
-        """
-        Camada 2 do Protocolo Anti-Alucinação:
-        Se a queixa for muito curta ou imprecisa (< 15 caracteres ou genérica),
-        ativa o Protocolo das 3 Perguntas Inegociáveis sem arriscar inferência cega.
-        """
-        prompt_limpo = prompt.strip().lower()
-        termos_vagos = ["ajuda", "erro", "deu ruim", "falar com alguem", "preciso de acesso", "documento", "nao funciona"]
-        
-        if len(prompt_limpo) < 15 or prompt_limpo in termos_vagos:
-            return [
-                "1. (O QUE) Qual é o documento, processo ou contrato específico envolvido?",
-                "2. (COMO) Qual ação exata você precisa executar (ex: emitir certidão, auditar saldo M4, consultar planta)?",
-                "3. (POR QUE) Qual é o número do lote, WBS ou empreendimento correspondente?"
-            ]
-        return None
-
     def sanitizar_e_injetar_harness(
         self,
         usuario_id: str,
@@ -175,7 +156,7 @@ class HdcGuardrailsHarness:
         prompt_usuario: str
     ) -> HarnessVerdict:
         """
-        Aplica as 5 Camadas de Blindagem do Protocolo Anti-Alucinação.
+        Aplica a blindagem de segurança e Pre-Retrieval para a LLM Soberana.
         """
         # 1. Verifica Account Lockout
         status_lockout = self.registrar_tentativa_e_verificar_lockout(usuario_id, sucesso=True)
@@ -198,17 +179,7 @@ class HdcGuardrailsHarness:
                 motivo="VIOLACAO_SEGURANCA: Padrão malicioso de Prompt Injection detectado e neutralizado pelo Harness."
             )
 
-        # 3. Avalia Ambiguidade Fuzzy e Trava do Chute
-        perguntas = self.avaliar_ambiguidade_fuzzy(prompt_usuario)
-        if perguntas:
-            return HarnessVerdict(
-                autorizado=True,
-                requer_protocolo_3_perguntas=True,
-                perguntas_refinamento=perguntas,
-                motivo="AMBIGUIDADE_DETECTADA: Entrada difusa acionou o Protocolo das 3 Perguntas Anti-Alucinação."
-            )
-
-        # 4. Injeção de Sigilo Conforme Cadeira PAM
+        # 3. Injeção de Sigilo Conforme Cadeira PAM
         sigilo_map = {
             "core_developer": "CONFIDENCIAL_PAM",
             "diretor_presidente": "CONFIDENCIAL_PAM",

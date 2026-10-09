@@ -202,16 +202,16 @@ def test_10_hdc_harness_guardrails_e_streaming():
     assert dados_inj["autorizado"] is False
     assert "Prompt Injection" in dados_inj["motivo"]
 
-    # 2. Teste de Entrada Ambígua (Deve ativar Protocolo das 3 Perguntas)
-    res_fuzzy = client.post("/api/v1/hdc/guardrails/check", json={
+    # 2. Teste de Entrada Direta e Fluida (Autorização imediata para a LLM Soberana)
+    res_fluida = client.post("/api/v1/hdc/guardrails/check", json={
         "model": "llama-3.1",
         "wbs_id": "WBS-SUG-014",
-        "messages": [{"role": "user", "content": "ajuda"}]
+        "messages": [{"role": "user", "content": "Olá, preciso de orientações gerais"}]
     })
-    assert res_fuzzy.status_code == 200
-    dados_fuzzy = res_fuzzy.json()
-    assert dados_fuzzy["requer_protocolo_3_perguntas"] is True
-    assert len(dados_fuzzy["perguntas_refinamento"]) == 3
+    assert res_fluida.status_code == 200
+    dados_fluida = res_fluida.json()
+    assert dados_fluida["autorizado"] is True
+    assert dados_fluida["wbs_autorizado"] == "WBS-SUG-014"
 
     # 3. Teste de Chat Completions Stream SSE
     res_stream = client.post("/api/v1/chat/completions/stream", json={

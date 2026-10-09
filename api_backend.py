@@ -599,19 +599,6 @@ async def chat_completions_stream(request: ChatStreamRequest, credentials: Optio
             yield "data: [DONE]\n\n"
         return StreamingResponse(erro_generator(), media_type="text/event-stream")
 
-    if verdict.requer_protocolo_3_perguntas:
-        async def perguntas_generator():
-            perguntas_str = "\n".join(verdict.perguntas_refinamento or [])
-            texto = (
-                "[PROTOCOLO ANTI-ALUCINAÇÃO ATIVADO]\n"
-                "Para garantir precisão pericial e evitar respostas imprecisas, por gentileza especifique:\n\n"
-                + perguntas_str
-            )
-            chunk = {"choices": [{"delta": {"content": texto}}]}
-            yield f"data: {json.dumps(chunk)}\n\n"
-            yield "data: [DONE]\n\n"
-        return StreamingResponse(perguntas_generator(), media_type="text/event-stream")
-
     stream_gen = hdc_harness.gerar_stream_llm(
         modelo_solicitado=request.model,
         wbs_id=verdict.wbs_autorizado or request.wbs_id,
