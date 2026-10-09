@@ -11,3 +11,11 @@ venv/
 logs/
 metagpt/
 workspace/
+
+# Credenciais OpenVPN / chaves (NUNCA versionar)
+*.ovpn
+*.key
+*.pem
+*.crt
+*.p12
+secrets/
