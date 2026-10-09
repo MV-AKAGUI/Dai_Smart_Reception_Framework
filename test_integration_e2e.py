@@ -224,7 +224,32 @@ def test_10_hdc_harness_guardrails_e_streaming():
     conteudo_sse = res_stream.text
     assert "data: " in conteudo_sse
     assert "[DONE]" in conteudo_sse
-    print("✅ [TESTE 10/10 PASSOU] HDC Harness de Guardrails, Zero-Alucinação e Streaming SSE 100% operacionais.")
+    print("✅ [TESTE 10/11 PASSOU] HDC Harness de Guardrails, Zero-Alucinação e Streaming SSE 100% operacionais.")
+
+def test_11_hdw_catalogo_estantes_e_streaming_render():
+    """Valida o catálogo das 6 Estantes Canônicas e o streaming de renderização de arquivos (1 MiB chunks)."""
+    # 1. Catálogo das 6 estantes
+    res_estantes = client.get("/api/v1/hdw/estantes")
+    assert res_estantes.status_code == 200
+    dados_estantes = res_estantes.json()
+    assert dados_estantes["total_estantes"] == 6
+    assert any(e["id"] == "EST-01" for e in dados_estantes["estantes"])
+    assert any(e["id"] == "EST-03" for e in dados_estantes["estantes"])
+
+    # 2. Itens de uma estante (ex: EST-03 - Financeiro & M4)
+    res_itens = client.get("/api/v1/hdw/estantes/EST-03/itens")
+    assert res_itens.status_code == 200
+    dados_itens = res_itens.json()
+    assert dados_itens["total_itens"] >= 1
+    cota_alvo = dados_itens["itens"][0]["cota"]
+    assert "EST-03" in cota_alvo
+
+    # 3. Streaming de renderização de documento bruto (PDF / 1 MiB chunks)
+    res_render = client.get(f"/api/v1/hdw/documentos/{cota_alvo}/render")
+    assert res_render.status_code == 200
+    assert "application/pdf" in res_render.headers["content-type"]
+    assert len(res_render.content) > 100
+    print("✅ [TESTE 11/11 PASSOU] Catálogo das 6 Estantes Canônicas e Streaming de Renderização HDW 100% operacionais.")
 
 if __name__ == "__main__":
     print("\n" + "="*60)
@@ -240,8 +265,9 @@ if __name__ == "__main__":
     test_08_handshake_cofre_pam_iga()
     test_09_hdc_hdw_enlace_e_autenticidade()
     test_10_hdc_harness_guardrails_e_streaming()
+    test_11_hdw_catalogo_estantes_e_streaming_render()
     print("="*60)
-    print("🏆 TODOS OS 10 TESTES PASSARAM COM 100% DE SUCESSO!")
+    print("🏆 TODOS OS 11 TESTES PASSARAM COM 100% DE SUCESSO!")
     print("="*60 + "\n")
 
 

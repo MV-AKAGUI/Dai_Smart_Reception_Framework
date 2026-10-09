@@ -479,11 +479,14 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("🧭 **Acesso Rápido:**")
-    sb_col1, sb_col2 = st.columns(2)
+    sb_col1, sb_col2, sb_col3 = st.columns(3)
     if sb_col1.button("💬 Lobby", use_container_width=True, key="sb_btn_lobby"):
         st.session_state.aba_ativa = "💬 Hall de Entrada (Recepção Dai)"
         st.rerun()
-    if sb_col2.button("📁 Kan-sa", use_container_width=True, key="sb_btn_kansa"):
+    if sb_col2.button("🏛️ HDW", use_container_width=True, key="sb_btn_hdw"):
+        st.session_state.aba_ativa = "🏛️ Biblioteca HDW (Custódia Soberana)"
+        st.rerun()
+    if sb_col3.button("📁 Kan-sa", use_container_width=True, key="sb_btn_kansa"):
         st.session_state.aba_ativa = "📁 監査 Kan-sa (Pasta & Laudos Oficiais)"
         st.rerun()
 
@@ -504,6 +507,7 @@ with st.sidebar:
 # ==========================================
 OPCOES_ABAS = [
     "💬 Hall de Entrada (Recepção Dai)",
+    "🏛️ Biblioteca HDW (Custódia Soberana)",
     "📁 監査 Kan-sa (Pasta & Laudos Oficiais)",
     "📋 Seu Contexto & Crachá VIP"
 ]
@@ -792,6 +796,139 @@ if st.session_state.aba_ativa == "💬 Hall de Entrada (Recepção Dai)":
                             st.error("❌ Erro interno no Cérebro da Dai.")
                     except requests.exceptions.ConnectionError:
                         st.error(f"❌ Conexão perdida com o Backend da Dai em {API_BASE_URL}.")
+
+# ==========================================
+# ABA HDW: BIBLIOTECA MULTIDISCIPLINAR E CUSTÓDIA SOBERANA
+# ==========================================
+elif st.session_state.aba_ativa == "🏛️ Biblioteca HDW (Custódia Soberana)":
+    st.markdown("""
+    <div class='kansa-header-banner' style='border-left: 5px solid #38bdf8;'>
+        <div style='display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;'>
+            <div>
+                <span style='color: #38bdf8; font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;'>
+                    Hudson Data Warehouse (HDW Soberano - Linux CentOS 7)
+                </span>
+                <h2 style='color: #ffffff; margin: 4px 0 6px 0; font-size: 1.8rem; font-weight: 800;'>
+                    🏛️ Biblioteca Multidisciplinar & Cofre de Evidências
+                </h2>
+                <p style='color: #94a3b8; font-size: 0.92rem; margin: 0; max-width: 850px;'>
+                    Acervo documental soberano categorizado por Estantes Canônicas (EST-01 a EST-06) e Árvore WBS.
+                    Transmissão não-bloqueante em streaming (1 MiB), cota canônica determinística e validação de autenticidade em tempo real.
+                </p>
+            </div>
+            <div style='text-align: right;'>
+                <span style='display: inline-block; background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; font-size: 0.82rem; padding: 6px 14px; border-radius: 20px; font-weight: 700; margin-bottom: 6px;'>
+                    🔒 Enlace: OpenVPN mTLS (OCI × 192.168.1.122)
+                </span><br/>
+                <span style='color: #cbd5e1; font-size: 0.8rem;'>Integridade Criptográfica: <strong>SHA-256 Inviolável</strong></span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 1. Obter Estantes do HDW via API Backend
+    try:
+        r_estantes = requests.get(f"{API_BASE_URL}/api/v1/hdw/estantes", timeout=3)
+        if r_estantes.status_code == 200:
+            estantes_data = r_estantes.json().get("estantes", [])
+        else:
+            estantes_data = []
+    except Exception:
+        estantes_data = []
+
+    if not estantes_data:
+        st.warning("⚠️ Não foi possível obter o catálogo de estantes diretamente da API. Verifique a conectividade com o backend.")
+    else:
+        # Seletor de Estante Canônica
+        opcoes_estantes = [f"{e['id']} — {e['nome']}" for e in estantes_data]
+        estante_sel_str = st.selectbox("📚 Selecione a Estante Canônica da Biblioteca:", opcoes_estantes)
+        estante_id_sel = estante_sel_str.split(" — ")[0]
+        estante_meta = next((e for e in estantes_data if e["id"] == estante_id_sel), {})
+
+        # Detalhes da Estante Selecionada
+        c_e1, c_e2, c_e3 = st.columns([1.5, 1.5, 1])
+        with c_e1:
+            st.markdown(f"**Disciplinas:** {estante_meta.get('disciplinas', 'Geral')}")
+            st.markdown(f"**Descrição:** *{estante_meta.get('descricao', '')}*")
+        with c_e2:
+            exts = ", ".join(estante_meta.get('extensoes', []))
+            st.markdown(f"**Extensões Homologadas:** `{exts}`")
+            st.markdown(f"**Visualizador Recomendado:** `{estante_meta.get('viewer_tipo', 'PDF')}`")
+        with c_e3:
+            sigilo = estante_meta.get('sigilo_padrao', 'INTERNO')
+            cor_sigilo = "#10b981" if sigilo == "INTERNO" else ("#f59e0b" if sigilo == "RESTRITO" else "#ef4444")
+            st.markdown(f"**Nível de Sigilo:** <span style='background: rgba(255,255,255,0.1); color: {cor_sigilo}; padding: 3px 8px; border-radius: 6px; font-weight: 700;'>{sigilo}</span>", unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # 2. Listagem de Documentos da Estante
+        try:
+            r_itens = requests.get(f"{API_BASE_URL}/api/v1/hdw/estantes/{estante_id_sel}/itens", timeout=3)
+            itens_lista = r_itens.json().get("itens", []) if r_itens.status_code == 200 else []
+        except Exception:
+            itens_lista = []
+
+        st.markdown(f"### 📑 Acervo Custodiado — {estante_meta.get('nome')} ({len(itens_lista)} documentos)")
+
+        for doc in itens_lista:
+            cota = doc.get("cota", "")
+            nome_doc = doc.get("nome_arquivo", "")
+            tam_mb = round(doc.get("tamanho_bytes", 0) / (1024 * 1024), 2)
+            hash_doc = doc.get("hash_sha256", "")
+            data_cust = doc.get("data_custodia", "")
+            wbs_doc = doc.get("wbs_id", "")
+
+            with st.container():
+                st.markdown(f"""
+                <div style='background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; margin-bottom: 12px;'>
+                    <div style='display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;'>
+                        <div>
+                            <span style='background: #38bdf8; color: #0B192C; font-weight: 800; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px;'>{cota}</span>
+                            <h4 style='margin: 6px 0 2px 0; color: #ffffff;'>📄 {nome_doc}</h4>
+                            <span style='color: #94a3b8; font-size: 0.8rem;'>WBS: <strong>{wbs_doc}</strong> | Tamanho: <strong>{tam_mb} MB</strong> | Data Custódia: <strong>{data_cust}</strong></span>
+                        </div>
+                    </div>
+                    <div style='margin-top: 8px;'>
+                        <code style='font-size: 0.72rem; color: #cbd5e1; word-break: break-all; background: #0b192c; padding: 4px 8px; border-radius: 4px; display: block;'>SHA-256: {hash_doc}</code>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                col_b1, col_b2, col_b3 = st.columns([1.5, 1.5, 1])
+                with col_b1:
+                    if st.button(f"👁️ Visualizar Arquivo (Streaming HDW)", key=f"btn_render_{cota}", use_container_width=True):
+                        st.session_state[f"show_preview_{cota}"] = not st.session_state.get(f"show_preview_{cota}", False)
+                with col_b2:
+                    if st.button(f"🛡️ Validar Autenticidade Forense", key=f"btn_auth_{cota}", use_container_width=True):
+                        with st.spinner("Dr. Taylor auditando hash SHA-256 no disco do HDW..."):
+                            try:
+                                r_auth = requests.post(
+                                    f"{API_BASE_URL}/api/v1/forensics/authenticity",
+                                    json={"cota_documento": cota, "hash_esperado": hash_doc},
+                                    timeout=5
+                                )
+                                if r_auth.status_code == 200:
+                                    st.session_state[f"certidao_{cota}"] = r_auth.json()
+                                else:
+                                    st.error(f"Erro na auditoria: {r_auth.text}")
+                            except Exception as ex_auth:
+                                st.error(f"Falha de conexão com a rota /authenticity: {ex_auth}")
+                with col_b3:
+                    url_stream_direta = f"{API_BASE_URL}/api/v1/hdw/documentos/{cota}/render"
+                    st.markdown(f"<a href='{url_stream_direta}' target='_blank' style='display: block; text-align: center; background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 7px; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600;'>🔗 Stream Direto ↗</a>", unsafe_allow_html=True)
+
+                # Exibição da Certidão Forense se solicitada
+                if st.session_state.get(f"certidao_{cota}"):
+                    cert = st.session_state[f"certidao_{cota}"]
+                    st.success(f"⚖️ **CERTIDÃO FORENSE EMITIDA:** {cert.get('status')} | Veredito: {cert.get('veredito')}")
+                    st.json(cert)
+
+                # Exibição do Visualizador em Streaming se solicitado
+                if st.session_state.get(f"show_preview_{cota}"):
+                    with st.expander(f"Visualizador de Documento — {nome_doc}", expanded=True):
+                        st.info(f"Transmitindo streaming seguro (1 MiB chunks) da rota `/api/v1/hdw/documentos/{cota}/render`.")
+                        url_render = f"{API_BASE_URL}/api/v1/hdw/documentos/{cota}/render"
+                        st.markdown(f'<iframe src="{url_render}" width="100%" height="600px" style="border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;"></iframe>', unsafe_allow_html=True)
 
 # ==========================================
 # ABA 2: PASTA DO KAN-SA E LAUDOS OFICIAIS

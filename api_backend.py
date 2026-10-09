@@ -552,6 +552,32 @@ async def verificar_autenticidade(request: ForensicAuthenticityRequest):
         hash_esperado=request.hash_esperado
     )
 
+@app.get("/api/v1/hdw/estantes")
+async def listar_estantes_hdw():
+    """Retorna as 6 Estantes Canônicas da Biblioteca Multidisciplinar do HDW."""
+    return await hdc_hdw_bridge.obter_catalogo_estantes()
+
+@app.get("/api/v1/hdw/estantes/{estante_id}/itens")
+async def listar_itens_estante_hdw(estante_id: str, limit: int = 50):
+    """Consulta os itens/documentos custodiados em uma estante do HDW."""
+    return await hdc_hdw_bridge.listar_itens_estante(estante_id=estante_id, limite=limit)
+
+@app.get("/api/v1/hdw/documentos/{cota_documento}/render")
+async def renderizar_documento_hdw(cota_documento: str):
+    """
+    Streaming binário direto do HDW (1 MiB chunks) para renderização no navegador da DAI.
+    Preserva a memória RAM do CentOS 7 e garante não-repúdio.
+    """
+    stream_generator = hdc_hdw_bridge.obter_stream_documento(cota_documento)
+    return StreamingResponse(
+        stream_generator,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{cota_documento}.pdf"',
+            "X-HDW-Cota": cota_documento
+        }
+    )
+
 # ==========================================
 # 4.3. HARNESS & CHAT STREAMING SOBERANO (HDC)
 # ==========================================
