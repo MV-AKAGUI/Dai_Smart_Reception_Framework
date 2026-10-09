@@ -107,6 +107,10 @@ class QuarentenaRequest(BaseModel):
     aprovado: bool
     maker_identity: Optional[str] = None
 
+class ForensicAuthenticityRequest(BaseModel):
+    cota_documento: str
+    hash_esperado: str
+
 # ==========================================
 # 2. CONFIGURAÇÃO DE BANCO DE DADOS
 # ==========================================
@@ -182,7 +186,7 @@ def login(request: LoginRequest):
     CREDENCIAIS_VALIDAS_TRANSICAO = {
         "123", "sugoi2026", "sugoi@2026", "daisugi2026", "pam_sugoi_2026", "akagui2026", "masterkey123"
     }
-    if s not in CREDENCIAIS_VALIDAS_TRANSICAO and len(s) < 3:
+    if s not in CREDENCIAIS_VALIDAS_TRANSICAO:
         raise HTTPException(status_code=401, detail="Credenciais corporativas inválidas ou não autorizadas no cofre PAM.")
 
     # 1. CORE DEVELOPERS (Soberania de Plataforma)
@@ -213,7 +217,7 @@ def login(request: LoginRequest):
     # =========================================================================
 
     # CADEIRA 1: TI / NÚCLEO TÉCNICO (Visualização e Suporte Técnico Global)
-    elif any(k in u for k in ['ti@', 'ti', 'nucleo.tecnico', 'nucleotecnico', 'admin.ti']):
+    elif any(k in u for k in ['admin', 'ti@', 'ti', 'nucleo.tecnico', 'nucleotecnico', 'admin.ti']):
         jwt_token = auth_guard.generate_token({
             "sub": "ti@sugoisa.com.br", "role": "admin_tecnico", "cadeira": "ti.nucleotecnico@sugoisa.com.br",
             "cadeira_id": "CAD-SUGOI-TI-001", "rota": "ROTA_B_PAM_NUCLEO_TECNICO"
@@ -525,6 +529,27 @@ def get_core_governance_status(dev_payload: Dict[str, Any] = Depends(auth_guard.
         "governed_by": "Akagui / Montanha Vermelha",
         "tenants": ["sugoi_sa"]
     }
+
+# ==========================================
+# 4.2. ROTAS FORENSES E ENLACE HDC × HDW
+# ==========================================
+from hdc_hdw_bridge import hdc_hdw_bridge
+
+@app.get("/api/v1/hdw/status")
+async def get_hdw_status():
+    """Consulta o status do enlace e saúde da OpenVPN com o HDW local (CentOS 7)."""
+    return await hdc_hdw_bridge.verificar_status_enlace()
+
+@app.post("/api/v1/forensics/authenticity")
+async def verificar_autenticidade(request: ForensicAuthenticityRequest):
+    """
+    Rota pericial homologada pelo Dr. Taylor:
+    Recalcula o hash do documento direto no disco do HDW e confronta com o log imutável de custódia.
+    """
+    return await hdc_hdw_bridge.validar_autenticidade_forense(
+        cota_documento=request.cota_documento,
+        hash_esperado=request.hash_esperado
+    )
 
 # ==========================================
 # 5. RETROALIMENTAÇÃO & EVOLUÇÃO CONTÍNUA
