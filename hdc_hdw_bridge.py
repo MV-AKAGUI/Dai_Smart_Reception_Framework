@@ -26,13 +26,12 @@ import httpx
 # ==============================================================================
 OVPN_GATEWAY = os.getenv("OVPN_GATEWAY", "87.102.137.206:1194")
 HDW_HOST = os.getenv("HDW_HOST", "10.8.0.1")  # IP virtual seguro dentro da OpenVPN
-HDW_PORT = int(os.getenv("HDW_PORT", "8080"))
+HDW_PORT = int(os.getenv("HDW_PORT", "8000"))  # Porta oficial da API Hudson S1 (uvicorn :8000)
 HDW_BASE_URL = os.getenv("HDW_BASE_URL", f"http://{HDW_HOST}:{HDW_PORT}")
 
 # Token da OpenVPN e Chave de API da Custódia Soberana
-# Alimentados pelas variáveis de ambiente assim que fornecidos pelo time de TI
-OVPN_TOKEN = os.getenv("OVPN_TOKEN", "PENDENTE_ENVIO_TI_SUGOI")
-HDW_API_KEY = os.getenv("HDW_API_KEY", os.getenv("OVPN_TOKEN", "daisugi_hdw_sovereign_key_sha256"))
+OVPN_TOKEN = os.getenv("OVPN_TOKEN", "Dai-Web_HDC_HDW")
+HDW_API_KEY = os.getenv("HDW_API_KEY", os.getenv("OVPN_TOKEN", "Dai-Web_HDC_HDW"))
 HDW_TIMEOUT = float(os.getenv("HDW_TIMEOUT_SECONDS", "10.0"))
 
 CHUNK_SIZE = 1024 * 1024  # 1 MiB (Preservação estrita de RAM no servidor Linux CentOS 7)
@@ -128,29 +127,53 @@ class HdcHdwBridge:
 
         try:
             async with httpx.AsyncClient(timeout=HDW_TIMEOUT) as client:
-                res = await client.post(
-                    f"{self.base_url}/api/v1/forensics/authenticity",
-                    json=payload,
+                res = await client.get(
+                    f"{self.base_url}/items/{cota_documento}",
                     headers=self.headers
                 )
-                if res.status_code == 200:
-                    return res.json()
-                elif res.status_code == 409:
-                    return {
-                        "autentico": False,
-                        "status": "ALERTA_ADULTERACAO_FORENSE",
-                        "detalhe": "Discrepância detectada entre o disco e a tabela custody_log."
-                    }
         except Exception as ex:
-            # Emulação de contingência determinística quando a rede estiver isolada
+            # Sem enlace NÃO há como atestar autenticidade: nunca devolver 'autêntico' por suposição.
             return {
-                "autentico": True,
-                "status": "VALIDADO_EM_CONTINGENCIA",
+                "autentico": None,
+                "status": "NAO_VERIFICADO_ENLACE_INDISPONIVEL",
                 "cota": cota_documento,
-                "hash_validado": hash_esperado,
-                "modo": "Simulação de verificação criptográfica local (Aguardando túnel ativo)",
                 "aviso": str(ex)
             }
+
+        if res.status_code == 404:
+            return {
+                "autentico": None,
+                "status": "COTA_NAO_ENCONTRADA_NO_HDW",
+                "cota": cota_documento
+            }
+        if res.status_code in (401, 403):
+            return {
+                "autentico": None,
+                "status": "NAO_VERIFICADO_CHAVE_API_RECUSADA",
+                "codigo_http": res.status_code,
+                "detalhe": "O HDW recusou a X-API-Key. Solicitar a chave oficial à TI."
+            }
+        if res.status_code != 200:
+            return {
+                "autentico": None,
+                "status": "NAO_VERIFICADO_RESPOSTA_INESPERADA",
+                "codigo_http": res.status_code
+            }
+
+        item = res.json()
+        hash_hdw = (item.get("hash_sha256") or "").lower()
+        autentico = hash_hdw == (hash_esperado or "").lower()
+        return {
+            "autentico": autentico,
+            "status": "AUTENTICO" if autentico else "ALERTA_ADULTERACAO_FORENSE",
+            "cota": cota_documento,
+            "hash_esperado": hash_esperado,
+            "hash_registrado_hdw": hash_hdw,
+            "estante": item.get("estante"),
+            "obra_wbs": item.get("obra_wbs"),
+            "recebido_em": item.get("received_at"),
+            "fonte": "HDW real (GET /items/{cota})"
+        }
 
     async def enviar_documento_streaming(
         self,
@@ -410,7 +433,9 @@ class HdcHdwBridge:
             "estante_id": estante_id,
             "estante_nome": estante_encontrada["nome"],
             "total_itens": len(itens),
-            "itens": itens
+            "itens": itens,
+            "simulado": True,
+            "aviso": "DADOS DE DEMONSTRAÇÃO: o HDW ainda não possui acervo ou não respondeu à consulta."
         }
 
     async def obter_stream_documento(self, cota_documento: str) -> AsyncGenerator[bytes, None]:

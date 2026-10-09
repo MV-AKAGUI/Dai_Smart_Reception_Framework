@@ -186,7 +186,8 @@ def test_09_hdc_hdw_enlace_e_autenticidade():
         "hash_esperado": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     })
     assert res_auth.status_code == 200
-    assert res_auth.json()["autentico"] is True
+    # HDW real ainda sem acervo / sem X-API-Key: jamais pode afirmar autenticidade
+    assert res_auth.json()["autentico"] is not True
     print("✅ [TESTE 9/10 PASSOU] Enlace HDC × HDW e Rota Pericial /authenticity validados com sucesso.")
 
 def test_10_hdc_harness_guardrails_e_streaming():
