@@ -8,6 +8,7 @@ if sys.platform == "win32":
 
 import os
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -550,6 +551,75 @@ async def verificar_autenticidade(request: ForensicAuthenticityRequest):
         cota_documento=request.cota_documento,
         hash_esperado=request.hash_esperado
     )
+
+# ==========================================
+# 4.3. HARNESS & CHAT STREAMING SOBERANO (HDC)
+# ==========================================
+from hdc_guardrails_harness import hdc_harness, ChatStreamRequest
+import json
+
+@app.post("/api/v1/hdc/guardrails/check")
+async def check_guardrails(request: ChatStreamRequest, credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+    """Auditoria de Guardrails & Pre-Retrieval antes da inferência."""
+    user_payload = auth_guard.decode_token(credentials.credentials) if credentials else {}
+    usuario_id = user_payload.get("sub", "visitante_anonimo")
+    role = user_payload.get("role", "visitante")
+    ultimo_prompt = request.messages[-1].get("content", "") if request.messages else ""
+    
+    verdict = hdc_harness.sanitizar_e_injetar_harness(
+        usuario_id=usuario_id,
+        wbs_solicitado=request.wbs_id,
+        role_usuario=role,
+        prompt_usuario=ultimo_prompt
+    )
+    return verdict.model_dump()
+
+@app.post("/api/v1/chat/completions/stream")
+async def chat_completions_stream(request: ChatStreamRequest, credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+    """
+    Rota Oficial de Streaming SSE do Chat Soberano com Harness.
+    Garante Zero Alucinação, Pre-Retrieval e execução a Custo Zero de tokens na nuvem privada OCI.
+    """
+    user_payload = auth_guard.decode_token(credentials.credentials) if credentials else {}
+    usuario_id = user_payload.get("sub", "operador_lobby")
+    role = user_payload.get("role", "colaborador")
+    ultimo_prompt = request.messages[-1].get("content", "") if request.messages else ""
+
+    verdict = hdc_harness.sanitizar_e_injetar_harness(
+        usuario_id=usuario_id,
+        wbs_solicitado=request.wbs_id,
+        role_usuario=role,
+        prompt_usuario=ultimo_prompt
+    )
+
+    if not verdict.autorizado:
+        async def erro_generator():
+            msg_erro = json.dumps({"error": verdict.motivo, "tentativas_restantes": verdict.tentativas_restantes})
+            yield f"data: {msg_erro}\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(erro_generator(), media_type="text/event-stream")
+
+    if verdict.requer_protocolo_3_perguntas:
+        async def perguntas_generator():
+            perguntas_str = "\n".join(verdict.perguntas_refinamento or [])
+            texto = (
+                "[PROTOCOLO ANTI-ALUCINAÇÃO ATIVADO]\n"
+                "Para garantir precisão pericial e evitar respostas imprecisas, por gentileza especifique:\n\n"
+                + perguntas_str
+            )
+            chunk = {"choices": [{"delta": {"content": texto}}]}
+            yield f"data: {json.dumps(chunk)}\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(perguntas_generator(), media_type="text/event-stream")
+
+    stream_gen = hdc_harness.gerar_stream_llm(
+        modelo_solicitado=request.model,
+        wbs_id=verdict.wbs_autorizado or request.wbs_id,
+        nivel_sigilo=verdict.nivel_sigilo,
+        mensagens=request.messages
+    )
+    return StreamingResponse(stream_gen, media_type="text/event-stream")
+
 
 # ==========================================
 # 5. RETROALIMENTAÇÃO & EVOLUÇÃO CONTÍNUA

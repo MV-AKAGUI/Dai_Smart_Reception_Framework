@@ -590,6 +590,25 @@ if st.session_state.aba_ativa == "💬 Hall de Entrada (Recepção Dai)":
         st.markdown(f"<h3 style='color: {cor_primaria}; margin-bottom: 2px;'>{titulo_chat}</h3>", unsafe_allow_html=True)
         st.markdown(f"<p style='color: #94a3b8; font-size: 0.95rem; margin-bottom: 12px;'>{subtitulo_chat}</p>", unsafe_allow_html=True)
 
+        # Seletor do Modo HDC Harness
+        c_mode1, c_mode2 = st.columns([1.5, 2.5])
+        modo_hdc = c_mode1.toggle("🛡️ HDC Harness (LLM OCI)", value=st.session_state.get("modo_hdc_ativo", True), help="Ativa o Harness de Segurança, Pre-Retrieval e Modelos Soberanos a Custo Zero")
+        st.session_state.modo_hdc_ativo = modo_hdc
+
+        if modo_hdc:
+            modelo_llm = c_mode2.selectbox(
+                "Modelo Soberano (Zero Token OCI):",
+                ["🦙 Meta Llama 3.1 8B (Geral)", "🌐 Qwen 2.5 7B (Coder/Processos)", "🔬 DeepSeek R1 (Raciocínio Lógico)"],
+                index=0,
+                label_visibility="collapsed"
+            )
+            modelo_id_map = {
+                "🦙 Meta Llama 3.1 8B (Geral)": "llama-3.1",
+                "🌐 Qwen 2.5 7B (Coder/Processos)": "qwen-2.5",
+                "🔬 DeepSeek R1 (Raciocínio Lógico)": "deepseek"
+            }
+            st.session_state.modelo_hdc_selecionado = modelo_id_map[modelo_llm]
+
     msg_boas_vindas = config.get("textos", {}).get("mensagem_boas_vindas", "Olá, sou a Dai, agente de triagem do Daisugi. Posso te ajudar diretamente, ou, te direcionar a alguma outra sala, me diga o que precisa.")
     if not st.session_state.messages:
         st.session_state.messages = [{
@@ -669,51 +688,110 @@ if st.session_state.aba_ativa == "💬 Hall de Entrada (Recepção Dai)":
             st.markdown(prompt_usuario)
 
         with st.chat_message("assistant", avatar=dai_avatar):
-            with st.spinner("台 Dai está consultando as regras de acolhimento e o diretório..."):
-                try:
-                    res = requests.post(
-                        f"{API_BASE_URL}/chat/triage",
-                        json={
-                            "texto_usuario": prompt_usuario,
-                            "id_usuario": st.session_state.get("paciente_id", 1)
-                        },
-                        timeout=5
-                    )
-                    if res.status_code == 200:
-                        dados = res.json()
-                        st.session_state.laudo_final = dados.get("laudo_final", "✅ Triagem Concluída.")
-                        
-                        texto_resposta = dados.get("resposta_dai", "")
-                        if dados.get("cache_hit"):
-                            texto_resposta = f"⚡ **[Atendimento Expresso — Cache O(1)]**\n\n{texto_resposta}"
-                        
-                        destino = dados.get("destino")
-                        if destino:
-                            st.session_state.ultimo_destino = destino
-                            
-                        cod_rastreio = dados.get("codigo_rastreamento") or st.session_state.ticket_atual.get("codigo")
-                        anexo = dados.get("arquivo_anexo")
-                        link_dw = dados.get("link_documento_dw")
-                        
-                        if st.session_state.ticket_atual:
-                            st.session_state.ticket_atual["destino"] = destino or st.session_state.ticket_atual["destino"]
-                            st.session_state.ticket_atual["status"] = "Roteamento Definido"
-                            if cod_rastreio:
-                                st.session_state.ticket_atual["codigo"] = cod_rastreio
-                                st.session_state.ticket_atual["qr_b64"] = generate_qr_code_base64(f"DAISUGI-VERIFIED:{cod_rastreio}:{destino}")
+            if st.session_state.get("modo_hdc_ativo", True):
+                modelo_ativo = st.session_state.get("modelo_hdc_selecionado", "llama-3.1")
+                with st.spinner(f"🛡️ HDC Harness processando inferência com modelo soberano ({modelo_ativo})..."):
+                    try:
+                        headers = {"Content-Type": "application/json"}
+                        token_jwt = st.session_state.get("token_jwt")
+                        if token_jwt:
+                            headers["Authorization"] = f"Bearer {token_jwt}"
 
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": texto_resposta,
-                            "arquivo_anexo": anexo,
-                            "link_dw": link_dw,
-                            "codigo_rastreamento": cod_rastreio
-                        })
-                        st.rerun()
-                    else:
-                        st.error("❌ Erro interno no Cérebro da Dai.")
-                except requests.exceptions.ConnectionError:
-                    st.error(f"❌ Conexão perdida com o Backend da Dai em {API_BASE_URL}.")
+                        history_msgs = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages if m.get("content")]
+                        payload = {
+                            "model": modelo_ativo,
+                            "wbs_id": "WBS-SUG-014",
+                            "messages": history_msgs,
+                            "temperature": 0.0
+                        }
+
+                        res = requests.post(
+                            f"{API_BASE_URL}/api/v1/chat/completions/stream",
+                            json=payload,
+                            headers=headers,
+                            stream=True,
+                            timeout=20
+                        )
+                        if res.status_code == 200:
+                            texto_resposta = ""
+                            placeholder = st.empty()
+                            for line in res.iter_lines():
+                                if line:
+                                    line_str = line.decode('utf-8')
+                                    if line_str.startswith("data: "):
+                                        chunk_str = line_str.replace("data: ", "").strip()
+                                        if chunk_str == "[DONE]":
+                                            break
+                                        try:
+                                            chunk_data = json.loads(chunk_str)
+                                            if "error" in chunk_data:
+                                                texto_resposta = f"⛔ **[Harness Bloqueio]** {chunk_data['error']}"
+                                                placeholder.markdown(texto_resposta)
+                                                break
+                                            delta = chunk_data.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                                            texto_resposta += delta
+                                            placeholder.markdown(texto_resposta)
+                                        except Exception:
+                                            pass
+
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": texto_resposta,
+                                "arquivo_anexo": None,
+                                "link_dw": None,
+                                "codigo_rastreamento": f"HDC-HARNESS-{int(time.time())}"
+                            })
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Erro no HDC Gateway: HTTP {res.status_code}")
+                    except Exception as e:
+                        st.error(f"❌ Falha de comunicação com o HDC Harness: {e}")
+            else:
+                with st.spinner("台 Dai está consultando as regras de acolhimento e o diretório..."):
+                    try:
+                        res = requests.post(
+                            f"{API_BASE_URL}/chat/triage",
+                            json={
+                                "texto_usuario": prompt_usuario,
+                                "id_usuario": st.session_state.get("paciente_id", 1)
+                            },
+                            timeout=5
+                        )
+                        if res.status_code == 200:
+                            dados = res.json()
+                            st.session_state.laudo_final = dados.get("laudo_final", "✅ Triagem Concluída.")
+                            
+                            texto_resposta = dados.get("resposta_dai", "")
+                            if dados.get("cache_hit"):
+                                texto_resposta = f"⚡ **[Atendimento Expresso — Cache O(1)]**\n\n{texto_resposta}"
+                            
+                            destino = dados.get("destino")
+                            if destino:
+                                st.session_state.ultimo_destino = destino
+                                
+                            cod_rastreio = dados.get("codigo_rastreamento") or st.session_state.ticket_atual.get("codigo")
+                            anexo = dados.get("arquivo_anexo")
+                            link_dw = dados.get("link_documento_dw")
+                            
+                            if st.session_state.ticket_atual:
+                                st.session_state.ticket_atual["destino"] = destino or st.session_state.ticket_atual["destino"]
+                                st.session_state.ticket_atual["status"] = "Roteamento Definido"
+                                if cod_rastreio:
+                                    st.session_state.ticket_atual["codigo"] = cod_rastreio
+                                    st.session_state.ticket_atual["qr_b64"] = generate_qr_code_base64(f"DAISUGI-VERIFIED:{cod_rastreio}:{destino}")
+
+                            st.session_state.messages.append({
+                                "role": "assistant",
+                                "content": texto_resposta,
+                                "arquivo_anexo": anexo,
+                                "link_dw": link_dw,
+                                "codigo_rastreamento": cod_rastreio
+                            })
+                            st.rerun()
+                        else:
+                            st.error("❌ Erro interno no Cérebro da Dai.")
+                    except requests.exceptions.ConnectionError:
+                        st.error(f"❌ Conexão perdida com o Backend da Dai em {API_BASE_URL}.")
 
 # ==========================================
 # ABA 2: PASTA DO KAN-SA E LAUDOS OFICIAIS
