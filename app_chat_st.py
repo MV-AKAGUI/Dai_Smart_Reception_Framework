@@ -926,36 +926,28 @@ O presente documento encontra-se liberado para visualização em tempo real na i
                                     except Exception:
                                         pass
 
-                        # Se o prompt ou resposta mencionar laudo, acórdão ou documento no HDW, abre automaticamente o Painel Lateral
+                        # Se o prompt ou resposta mencionar laudo, relatório, dívida, acórdão ou documento no HDW, abre automaticamente o Painel Lateral
                         link_dw_novo = None
-                        if any(k in prompt_usuario.lower() for k in ["laudo", "hdw", "documento", "2025", "ccb", "fatura", "acórdão", "acordao"]):
+                        p_lower = prompt_usuario.lower()
+                        termos_doc = ["laudo", "relatorio", "relatório", "divida", "dívida", "endividamento", "hdw", "documento", "kansa", "kan-sa", "ccb", "fatura", "acórdão", "acordao", "2021", "2022", "2023", "2024", "2025"]
+                        
+                        if any(k in p_lower for k in termos_doc):
+                            # Identifica o ano solicitado se houver
+                            ano_alvo = "2024" if "2024" in p_lower else ("2023" if "2023" in p_lower else ("2022" if "2022" in p_lower else ("2021" if "2021" in p_lower else "2025")))
+                            info_ano_alvo = DADOS_EXERCICIOS.get(ano_alvo, {})
+                            
                             link_dw_novo = {
-                                "titulo": "Laudo Colegiado Oficial Kan-sa 2025",
+                                "titulo": f"Laudo Executivo M4 — {ano_alvo} (Controle de Endividamento)",
                                 "repositorio": "HDW Soberano (CentOS 7)",
-                                "cota": "EST-01-KANSA-2025-VIBE",
+                                "cota": f"EST-01-KANSA-{ano_alvo}-M4",
                                 "hash": "e24de050a3f8a4e320f77bc954f62024765d1dcb74c43169f4bc7210e74bcfc4"
                             }
                             st.session_state.active_artifact = {
-                                "tipo": "hdw_doc",
-                                "titulo": link_dw_novo["titulo"],
-                                "cota": link_dw_novo["cota"],
-                                "hash": link_dw_novo["hash"],
-                                "origem": "CentOS 7 - 10.8.0.1:8000",
-                                "conteudo": f"""# 🏛️ ACÓRDÃO & LAUDO PERICIAL KAN-SA 2025
-**Tribunal Pericial Soberano - Duplo Grau de Jurisdição**
-
-- **Cota MARC/HDW:** `{link_dw_novo['cota']}`
-- **Custódia Forense:** Hudson Data Warehouse (CentOS 7 - 10.8.0.1:8000)
-- **Hash Criptográfico SHA-256:** `{link_dw_novo['hash']}`
-- **Status:** Custodiado, Inviolável e Homologado pelo Colegiado.
-
----
-### 1. Resumo Executivo das Demonstrações Financeiras
-As análises periciais do exercício contábil e fiduciário de 2025 atestam a conformidade dos módulos Kan-sa e Kigyou, com validação de SoD (Segregação de Funções) sob o ecossistema Daisugi.
-
-### 2. Parecer Técnico da DAI
-O presente documento encontra-se liberado para visualização em tempo real na interface dividida com verificação instantânea no HDW.
-"""
+                                "tipo": "kansa_folder",
+                                "titulo": f"Pasta Oficial Kan-sa — Exercício {ano_alvo}",
+                                "cota": f"EST-01-KANSA-{ano_alvo}",
+                                "hash": "e24de050a3f8a4e320f77bc954f62024765d1dcb74c43169f4bc7210e74bcfc4",
+                                "origem": "Hudson Data Warehouse (CentOS 7 - 10.8.0.1:8000)"
                             }
 
                         st.session_state.messages.append({
