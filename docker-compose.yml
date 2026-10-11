@@ -43,6 +43,11 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-masterkey123}
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
       - EMBED_MODEL=${EMBED_MODEL:-nomic-embed-text}
+      - HDW_HOST=${HDW_HOST:-10.8.0.1}
+      - HDW_PORT=${HDW_PORT:-8000}
+      - HDW_BASE_URL=${HDW_BASE_URL:-http://10.8.0.1:8000}
+      - OVPN_TOKEN=${OVPN_TOKEN:-Dai-Web_HDC_HDW}
+      - HDW_API_KEY=${HDW_API_KEY:-38925b32ce108ddf4cda7d54cabc3cb9acc56e3c8b58fbd3ea8cf6327921e862}
     ports:
       - "8001:8001"
 
