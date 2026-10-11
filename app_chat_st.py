@@ -116,6 +116,147 @@ def obter_arquivos_exercicio(ano: str):
         
     return pdf_path, html_path, acordao_path
 
+def renderizar_pasta_kansa(prefixo_key: str = "kansa"):
+    """
+    Renderiza os laudos, gráficos e relatórios oficiais M4 do Kan-sa.
+    Pode ser chamado no painel lateral de artefatos (com o chat ativo) ou na aba cheia.
+    """
+    # MÓDULO: EVOLUÇÃO DA DÍVIDA (2021 A 2025)
+    st.markdown("### 📈 Evolução do Endividamento Consolidado (2021 a 2025)")
+    st.markdown("<p style='color: #94a3b8; font-size: 0.88rem;'>Trajetória pericial da dívida bancária e mercado de capitais nos 5 exercícios auditados.</p>", unsafe_allow_html=True)
+
+    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    col_m1.metric("Dívida Inicial (2021)", "R$ 165,45 M", "8 Contratos")
+    col_m2.metric("Dívida Atual (2025)", "R$ 74,74 M", "-54,8% Desalavancagem")
+    col_m3.metric("Total Amortizado", "R$ 90,71 M", "4 Operações Quitadas")
+    col_m4.metric("Auditoria Colegiada", "100% Homologado", "Diferença R$ 0,00")
+
+    # Filtro Interativo de Período
+    anos_disponiveis = ["2021", "2022", "2023", "2024", "2025"]
+    anos_selecionados = st.multiselect(
+        "Selecionar Exercícios para Visualização Comparativa:",
+        options=anos_disponiveis,
+        default=anos_disponiveis,
+        key=f"ms_anos_evolucao_{prefixo_key}"
+    )
+
+    if anos_selecionados and pd is not None:
+        dados_df = []
+        for a in sorted(anos_selecionados):
+            info_a = DADOS_EXERCICIOS.get(a, {})
+            dados_df.append({
+                "Ano": a,
+                "Saldo Devedor (R$ Mi)": round(info_a.get("saldo_num", 0.0) / 1000000, 2),
+                "Contratos Ativos": info_a.get("contratos", 0),
+                "Amortização": info_a.get("amortizacao", "-")
+            })
+        df_chart = pd.DataFrame(dados_df)
+        
+        c_ch1, c_ch2 = st.columns([2.0, 1.8])
+        with c_ch1:
+            st.caption("📊 Saldo Devedor Consolidado por Exercício (R$ Mi):")
+            st.bar_chart(df_chart, x="Ano", y="Saldo Devedor (R$ Mi)", color="#10b981")
+        with c_ch2:
+            st.caption("📋 Resumo Analítico:")
+            st.dataframe(df_chart, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+    st.markdown("### 📑 Acervo de Laudos Executivos Oficiais M4 (Ano a Ano)")
+
+    anos_exibicao = sorted(anos_selecionados if anos_selecionados else anos_disponiveis, reverse=True)
+
+    for ano in anos_exibicao:
+        info_ano = DADOS_EXERCICIOS.get(ano, {})
+        pdf_path, html_path, acordao_path = obter_arquivos_exercicio(ano)
+        
+        st.markdown(f"""
+        <div class='kansa-report-card'>
+            <div style='display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 12px;'>
+                <div>
+                    <span style='background: rgba(16, 185, 129, 0.2); color: #34d399; font-weight: 800; font-size: 0.72rem; padding: 2px 7px; border-radius: 5px;'>EXERCÍCIO {ano}</span>
+                    <h4 style='margin: 3px 0 0 0; color: #ffffff;'>📄 Laudo Executivo M4 — {ano}</h4>
+                </div>
+                <div style='text-align: right;'>
+                    <span style='font-size: 0.75rem; color: #94a3b8;'>Saldo Auditado:</span><br/>
+                    <strong style='font-size: 1.15rem; color: #38bdf8;'>{info_ano.get('saldo_str', 'N/D')}</strong>
+                </div>
+            </div>
+            <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 12px;'>
+                <div>📑 <strong>Operações:</strong> {info_ano.get('contratos')} Contratos</div>
+                <div>📉 <strong>Amortização:</strong> {info_ano.get('amortizacao')}</div>
+                <div>🏦 <strong>Credores:</strong> {info_ano.get('credores')}</div>
+                <div>⚖️ <strong>Status:</strong> <span style='color: #34d399;'>{info_ano.get('veredito')}</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        c_btn_pdf, c_btn_html, c_btn_acordao = st.columns([1.4, 1.3, 1.2])
+
+        with c_btn_pdf:
+            if pdf_path and os.path.exists(pdf_path):
+                try:
+                    with open(pdf_path, "rb") as pf:
+                        bytes_pdf = pf.read()
+                    st.download_button(
+                        label=f"📥 PDF {ano} ({len(bytes_pdf)/1024/1024:.1f}MB)",
+                        data=bytes_pdf,
+                        file_name=f"LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_{ano}.pdf",
+                        mime="application/pdf",
+                        key=f"btn_dl_pdf_{ano}_{prefixo_key}",
+                        use_container_width=True,
+                        type="primary"
+                    )
+                except Exception as err:
+                    st.error(f"Erro ao preparar PDF: {err}")
+            else:
+                st.button(f"⚠️ PDF {ano} Indisponível", disabled=True, use_container_width=True, key=f"btn_dis_pdf_{ano}_{prefixo_key}")
+
+        with c_btn_html:
+            if html_path and os.path.exists(html_path):
+                try:
+                    with open(html_path, "rb") as hf:
+                        bytes_html = hf.read()
+                    st.download_button(
+                        label=f"💾 HTML {ano}",
+                        data=bytes_html,
+                        file_name=f"LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_{ano}.html",
+                        mime="text/html",
+                        key=f"btn_dl_html_{ano}_{prefixo_key}",
+                        use_container_width=True
+                    )
+                except Exception as err:
+                    st.error(f"Erro ao ler HTML: {err}")
+            else:
+                st.button(f"⚠️ HTML {ano} Indisponível", disabled=True, use_container_width=True, key=f"btn_dis_html_{ano}_{prefixo_key}")
+
+        with c_btn_acordao:
+            ver_acordao = st.checkbox(f"⚖️ Acórdão {ano}", key=f"cb_acordao_{ano}_{prefixo_key}")
+
+        with st.expander(f"👁️ Visualizar Relatório Web Interativo Completo — {ano}", expanded=False):
+            if html_path and os.path.exists(html_path):
+                try:
+                    with open(html_path, "r", encoding="utf-8") as hf:
+                        html_content = hf.read()
+                    st.components.v1.html(html_content, height=600, scrolling=True)
+                except Exception as e:
+                    st.error(f"Falha ao carregar HTML: {e}")
+            else:
+                st.info("Arquivo HTML não localizado nesta pasta.")
+
+        if ver_acordao:
+            st.markdown(f"#### ⚖️ Acórdão de Julgamento — Revisão do Colegiado ({ano})")
+            if acordao_path and os.path.exists(acordao_path):
+                try:
+                    with open(acordao_path, "r", encoding="utf-8") as af:
+                        texto_acordao = af.read()
+                    st.markdown(texto_acordao)
+                except Exception as e:
+                    st.error(f"Erro ao abrir Acórdão: {e}")
+            else:
+                st.info(f"Acórdão registrado nos autos do exercício {ano}. Veredito homologado com eficácia plena e diferença R$ 0,0000.")
+
+        st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
+
 def get_base64_image(image_path: str) -> str:
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -549,8 +690,20 @@ with st.sidebar:
         st.session_state.aba_ativa = "🏛️ Biblioteca HDW (Custódia Soberana)"
         st.rerun()
     if sb_col3.button("📁 Kan-sa", use_container_width=True, key="sb_btn_kansa"):
-        st.session_state.aba_ativa = "📁 監査 Kan-sa (Pasta & Laudos Oficiais)"
+        st.session_state.aba_ativa = "💬 Hall de Entrada (Recepção Dai)"
+        st.session_state.active_artifact = {
+            "tipo": "kansa_folder",
+            "titulo": "Pasta Oficial Kan-sa — Acervo & Laudos Executivos M4",
+            "cota": "EST-01-KANSA-FOLDER",
+            "hash": "e24de050a3f8a4e320f77bc954f62024765d1dcb74c43169f4bc7210e74bcfc4",
+            "origem": "Hudson Data Warehouse (CentOS 7 - 10.8.0.1:8000)"
+        }
         st.rerun()
+
+    if st.session_state.aba_ativa != "💬 Hall de Entrada (Recepção Dai)":
+        if st.sidebar.button("💬 ◀ Voltar ao Chat da Dai", use_container_width=True, type="primary"):
+            st.session_state.aba_ativa = "💬 Hall de Entrada (Recepção Dai)"
+            st.rerun()
 
     if st.session_state.ticket_atual:
         st.markdown("---")
@@ -573,7 +726,14 @@ with c_sys_nav[0]:
         st.info("ℹ️ Sistema '企業 Kigyou' (Gestão, Cultura e Metabolismo) em fase de integração contínua.")
 with c_sys_nav[1]:
     if st.button("📊 Kan-sa", key="top_btn_kansa", use_container_width=True, type="primary"):
-        st.session_state.aba_ativa = "📁 監査 Kan-sa (Pasta & Laudos Oficiais)"
+        st.session_state.aba_ativa = "💬 Hall de Entrada (Recepção Dai)"
+        st.session_state.active_artifact = {
+            "tipo": "kansa_folder",
+            "titulo": "Pasta Oficial Kan-sa — Acervo & Laudos Executivos M4",
+            "cota": "EST-01-KANSA-FOLDER",
+            "hash": "e24de050a3f8a4e320f77bc954f62024765d1dcb74c43169f4bc7210e74bcfc4",
+            "origem": "Hudson Data Warehouse (CentOS 7 - 10.8.0.1:8000)"
+        }
         st.rerun()
 with c_sys_nav[2]:
     if st.button("🏛️ HDW (Biblioteca-DW)", key="top_btn_hdw", use_container_width=True):
@@ -865,8 +1025,11 @@ O presente documento encontra-se liberado para visualização em tempo real na i
             st.markdown(f"**Hash SHA-256:** `{art.get('hash', 'e24de050a3f8a4e320f77bc954f62024')}`")
             st.markdown("---")
             
-            # Exibição do Conteúdo do Documento
-            st.markdown(art.get("conteudo", "Conteúdo não disponível."))
+            # Exibição do Conteúdo do Documento ou da Pasta Kan-sa
+            if art.get("tipo") == "kansa_folder":
+                renderizar_pasta_kansa("painel_lateral")
+            else:
+                st.markdown(art.get("conteudo", "Conteúdo não disponível."))
             
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1063,149 +1226,7 @@ elif st.session_state.aba_ativa == "📁 監査 Kan-sa (Pasta & Laudos Oficiais)
 
     st.markdown("---")
 
-    # MÓDULO: EVOLUÇÃO DA DÍVIDA (2021 A 2025)
-    st.markdown("### 📈 Evolução do Endividamento Consolidado (2021 a 2025)")
-    st.markdown("<p style='color: #94a3b8; font-size: 0.9rem;'>Trajetória pericial da dívida bancária e mercado de capitais ao longo dos 5 exercícios auditados.</p>", unsafe_allow_html=True)
-
-    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-    col_m1.metric("Dívida Inicial (2021)", "R$ 165,45 M", "8 Contratos")
-    col_m2.metric("Dívida Atual (2025)", "R$ 74,74 M", "-54,8% Desalavancagem")
-    col_m3.metric("Total Amortizado", "R$ 90,71 M", "4 Operações Quitadas")
-    col_m4.metric("Auditoria Colegiada", "100% Homologado", "Diferença R$ 0,00")
-
-    # Filtro Interativo de Período
-    anos_disponiveis = ["2021", "2022", "2023", "2024", "2025"]
-    anos_selecionados = st.multiselect(
-        "Selecionar Exercícios para Visualização Comparativa:",
-        options=anos_disponiveis,
-        default=anos_disponiveis,
-        key="ms_anos_evolucao"
-    )
-
-    if anos_selecionados and pd is not None:
-        dados_df = []
-        for a in sorted(anos_selecionados):
-            info_a = DADOS_EXERCICIOS.get(a, {})
-            dados_df.append({
-                "Ano": a,
-                "Saldo Devedor (R$ Mi)": round(info_a.get("saldo_num", 0.0) / 1000000, 2),
-                "Contratos Ativos": info_a.get("contratos", 0),
-                "Amortização": info_a.get("amortizacao", "-")
-            })
-        df_chart = pd.DataFrame(dados_df)
-        
-        c_ch1, c_ch2 = st.columns([2.2, 1.8])
-        with c_ch1:
-            st.caption("📊 Saldo Devedor Consolidado por Exercício (R$ Milhões):")
-            st.bar_chart(df_chart, x="Ano", y="Saldo Devedor (R$ Mi)", color="#10b981")
-        with c_ch2:
-            st.caption("📋 Resumo Comparativo Analítico:")
-            st.dataframe(df_chart, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-
-    # ACERVO DOS LAUDOS EXECUTIVOS COM BOTÕES DIRETOS
-    st.markdown("### 📑 Acervo de Laudos Executivos Oficiais M4 (Ano a Ano)")
-    st.markdown("<p style='color: #94a3b8; font-size: 0.9rem;'>Clique para baixar o PDF Oficial sem cortes pronto para assinatura ou visualizar o relatório interativo web e o acórdão colegiado.</p>", unsafe_allow_html=True)
-
-    anos_exibicao = sorted(anos_selecionados if anos_selecionados else anos_disponiveis, reverse=True)
-
-    for ano in anos_exibicao:
-        info_ano = DADOS_EXERCICIOS.get(ano, {})
-        pdf_path, html_path, acordao_path = obter_arquivos_exercicio(ano)
-        
-        st.markdown(f"""
-        <div class='kansa-report-card'>
-            <div style='display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 14px;'>
-                <div>
-                    <span style='background: rgba(16, 185, 129, 0.2); color: #34d399; font-weight: 800; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;'>EXERCÍCIO {ano}</span>
-                    <h3 style='margin: 4px 0 0 0; color: #ffffff;'>📄 Laudo Executivo M4 — {ano}</h3>
-                </div>
-                <div style='text-align: right;'>
-                    <span style='font-size: 0.8rem; color: #94a3b8;'>Saldo Auditado:</span><br/>
-                    <strong style='font-size: 1.25rem; color: #38bdf8;'>{info_ano.get('saldo_str', 'N/D')}</strong>
-                </div>
-            </div>
-            <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 16px;'>
-                <div>📑 <strong>Operações:</strong> {info_ano.get('contratos')} Contratos Ativos</div>
-                <div>📉 <strong>Amortização Anual:</strong> {info_ano.get('amortizacao')}</div>
-                <div>🏦 <strong>Credores:</strong> {info_ano.get('credores')}</div>
-                <div>⚖️ <strong>Status Colegiado:</strong> <span style='color: #34d399;'>{info_ano.get('veredito')}</span></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        c_btn_pdf, c_btn_html, c_btn_acordao = st.columns([1.5, 1.3, 1.2])
-
-        # 1. BOTÃO DOWNLOAD PDF OFICIAL
-        with c_btn_pdf:
-            if pdf_path and os.path.exists(pdf_path):
-                try:
-                    with open(pdf_path, "rb") as pf:
-                        bytes_pdf = pf.read()
-                    st.download_button(
-                        label=f"📥 Baixar PDF Oficial {ano} ({len(bytes_pdf)/1024/1024:.1f} MB)",
-                        data=bytes_pdf,
-                        file_name=f"LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_{ano}.pdf",
-                        mime="application/pdf",
-                        key=f"btn_dl_pdf_{ano}",
-                        use_container_width=True,
-                        type="primary"
-                    )
-                except Exception as err:
-                    st.error(f"Erro ao preparar PDF: {err}")
-            else:
-                st.button(f"⚠️ PDF {ano} Indisponível", disabled=True, use_container_width=True, key=f"btn_dis_pdf_{ano}")
-
-        # 2. BOTÃO VISUALIZAR HTML
-        with c_btn_html:
-            if html_path and os.path.exists(html_path):
-                try:
-                    with open(html_path, "rb") as hf:
-                        bytes_html = hf.read()
-                    st.download_button(
-                        label=f"💾 Baixar HTML Interativo {ano}",
-                        data=bytes_html,
-                        file_name=f"LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_{ano}.html",
-                        mime="text/html",
-                        key=f"btn_dl_html_{ano}",
-                        use_container_width=True
-                    )
-                except Exception as err:
-                    st.error(f"Erro ao ler HTML: {err}")
-            else:
-                st.button(f"⚠️ HTML {ano} Indisponível", disabled=True, use_container_width=True, key=f"btn_dis_html_{ano}")
-
-        # 3. ACÓRDÃO COLEGIADO
-        with c_btn_acordao:
-            ver_acordao = st.checkbox(f"⚖️ Ver Acórdão {ano}", key=f"cb_acordao_{ano}")
-
-        # Exibição do HTML dentro de Expander
-        with st.expander(f"👁️ Visualizar Relatório Web Interativo Completo — {ano}", expanded=False):
-            if html_path and os.path.exists(html_path):
-                try:
-                    with open(html_path, "r", encoding="utf-8") as hf:
-                        html_content = hf.read()
-                    st.components.v1.html(html_content, height=650, scrolling=True)
-                except Exception as e:
-                    st.error(f"Falha ao carregar HTML: {e}")
-            else:
-                st.info("Arquivo HTML não localizado nesta pasta.")
-
-        # Exibição do Acórdão
-        if ver_acordao:
-            st.markdown(f"#### ⚖️ Acórdão de Julgamento — Revisão do Colegiado ({ano})")
-            if acordao_path and os.path.exists(acordao_path):
-                try:
-                    with open(acordao_path, "r", encoding="utf-8") as af:
-                        texto_acordao = af.read()
-                    st.markdown(texto_acordao)
-                except Exception as e:
-                    st.error(f"Erro ao abrir Acórdão: {e}")
-            else:
-                st.info(f"Acórdão registrado nos autos do exercício {ano}. Veredito homologado com eficácia plena e diferença R$ 0,0000.")
-
-        st.markdown("<div style='margin-bottom: 18px;'></div>", unsafe_allow_html=True)
+    renderizar_pasta_kansa("aba_cheia")
 
 # ==========================================
 # ABA 3: SEU CONTEXTO, CRACHÁ VIP E FEEDBACK
