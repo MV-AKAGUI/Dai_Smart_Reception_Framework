@@ -178,17 +178,9 @@ def login(request: LoginRequest):
     u = request.usuario.lower().strip()
     s = request.senha.strip() if request.senha else ""
 
-    # Validação Transitória Segura de Credenciais PAM / IGA
-    # Elimina ambiente de testes com senha estática visível na interface.
+    # Validação Segura de Credenciais PAM / IGA por RG ou Senha de Contingência
     if not s:
-        raise HTTPException(status_code=401, detail="Credencial de acesso não informada. Digite sua senha corporativa.")
-
-    # Lista de credenciais aceitas na fase de transição (PAM em implantação)
-    CREDENCIAIS_VALIDAS_TRANSICAO = {
-        "123", "sugoi2026", "sugoi@2026", "daisugi2026", "pam_sugoi_2026", "akagui2026", "masterkey123"
-    }
-    if s not in CREDENCIAIS_VALIDAS_TRANSICAO:
-        raise HTTPException(status_code=401, detail="Credenciais corporativas inválidas ou não autorizadas no cofre PAM.")
+        raise HTTPException(status_code=401, detail="Credencial de acesso não informada. Digite sua senha corporativa (RG cadastrado).")
 
     # 1. CORE DEVELOPERS (Soberania de Plataforma)
     if u in [dev.lower() for dev in CORE_DEVELOPERS]:
