@@ -393,6 +393,8 @@ if "ano_foco_kansa" not in st.session_state:
     st.session_state.ano_foco_kansa = "2025"
 if "active_artifact" not in st.session_state:
     st.session_state.active_artifact = None
+if "artifact_expanded" not in st.session_state:
+    st.session_state.artifact_expanded = False
 
 # ==========================================
 # 0. TELA DE AUTENTICAÇÃO E PORTARIA (LOGIN)
@@ -563,37 +565,30 @@ with st.sidebar:
         st.rerun()
 
 # ==========================================
-# 2. SELETOR DE ABAS PRINCIPAIS (COM ESTADO)
+# 2. BARRA DE SISTEMAS SUPERIOR (ECOSSISTEMA DAISUGI)
 # ==========================================
-OPCOES_ABAS = [
-    "💬 Hall de Entrada (Recepção Dai)",
-    "🏛️ Biblioteca HDW (Custódia Soberana)",
-    "📁 監査 Kan-sa (Pasta & Laudos Oficiais)",
-    "📋 Seu Contexto & Crachá VIP"
-]
-
-if st.session_state.aba_ativa not in OPCOES_ABAS:
-    st.session_state.aba_ativa = OPCOES_ABAS[0]
-
-c_nav_left, c_nav_right = st.columns([3.4, 0.6])
-with c_nav_left:
-    idx_tab = OPCOES_ABAS.index(st.session_state.aba_ativa)
-    nova_aba = st.radio(
-        "Navegação",
-        OPCOES_ABAS,
-        index=idx_tab,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="main_nav_radio"
-    )
-    if nova_aba != st.session_state.aba_ativa:
-        st.session_state.aba_ativa = nova_aba
+c_sys_nav = st.columns([1.3, 1.2, 1.5, 1.4, 1.3, 1.3])
+with c_sys_nav[0]:
+    if st.button("🏢 Kigyou (em desenv.)", key="top_btn_kigyou", use_container_width=True):
+        st.info("ℹ️ Sistema '企業 Kigyou' (Gestão, Cultura e Metabolismo) em fase de integração contínua.")
+with c_sys_nav[1]:
+    if st.button("📊 Kan-sa", key="top_btn_kansa", use_container_width=True, type="primary"):
+        st.session_state.aba_ativa = "📁 監査 Kan-sa (Pasta & Laudos Oficiais)"
         st.rerun()
-
-with c_nav_right:
+with c_sys_nav[2]:
+    if st.button("🏛️ HDW (Biblioteca-DW)", key="top_btn_hdw", use_container_width=True):
+        st.session_state.aba_ativa = "🏛️ Biblioteca HDW (Custódia Soberana)"
+        st.rerun()
+with c_sys_nav[3]:
+    if st.button("🔍 Portal do Auditor (em desenv.)", key="top_btn_auditor", use_container_width=True):
+        st.info("ℹ️ 'Portal do Auditor' (Perícia, Trilha de Auditoria e Duplo Grau) em desenvolvimento.")
+with c_sys_nav[4]:
+    if st.button("🤝 Parceiro (em desenv.)", key="top_btn_parceiro", use_container_width=True):
+        st.info("ℹ️ Portal 'Parceiro' (Fornecedores, Credenciados e Medições de Obras) em desenvolvimento.")
+with c_sys_nav[5]:
     st.markdown("<div style='text-align: right; padding-top: 6px;'><span class='badge-online'><span class='pulse-dot'></span> SUGOI S.A.</span></div>", unsafe_allow_html=True)
 
-st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
 # ==========================================
 # ABA 1: CHAT INTUITIVO DA DAI (LOBBY CENTRAL)
@@ -603,58 +598,8 @@ if st.session_state.aba_ativa == "💬 Hall de Entrada (Recepção Dai)":
     titulo_chat = config.get("textos", {}).get("titulo_chat", "台 Dai - Lobby Central")
     subtitulo_chat = config.get("textos", {}).get("subtitulo_chat", "*Acolhimento empático, triagem instantânea e resolutividade corporativa.*")
     
-    col_chat, col_sistemas = st.columns([2.7, 1.3], gap="medium")
-    
-    with col_sistemas:
-        st.markdown("<h4 style='color: #00A86B; margin-top: 4px; margin-bottom: 12px; font-weight: 700;'>🏛️ Sistemas Disponíveis</h4>", unsafe_allow_html=True)
-        
-        # 1. Kigyou (Primeiro - Gestão, Planejamento, Cultura e Relacionamento)
-        st.markdown("""
-        <div class='sistema-card-box sistema-kigyou'>
-            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                <strong style='font-size: 1.05rem; color: #f8fafc;'>企業 Kigyou</strong>
-                <span style='background: rgba(0, 180, 216, 0.2); color: #38bdf8; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>🔵 Disponível</span>
-            </div>
-            <p style='color: #94a3b8; font-size: 0.8rem; margin: 6px 0 10px 0; line-height: 1.4;'>
-                Gestão, Planejamento, Cultura e Relacionamento
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Acessar Kigyou", key="btn_goto_kigyou", use_container_width=True):
-            st.session_state.quick_prompt_selecionado = "Gostaria de consultar as diretrizes de governança e metabolismo no Kigyou."
-            st.rerun()
-
-        # 2. Kan-sa (Segundo - Controladoria, FP&A e Auditoria)
-        st.markdown("""
-        <div class='sistema-card-box sistema-kansa' style='margin-top: 14px;'>
-            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                <strong style='font-size: 1.05rem; color: #f8fafc;'>監査 Kan-sa</strong>
-                <span style='background: rgba(0, 168, 107, 0.2); color: #34d399; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;'>🟢 Online</span>
-            </div>
-            <p style='color: #94a3b8; font-size: 0.8rem; margin: 6px 0 10px 0; line-height: 1.4;'>
-                Controladoria, FP&A e Auditoria
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("📂 Acessar Pasta do Kan-sa ➔", key="btn_goto_kansa", use_container_width=True, type="primary"):
-            st.session_state.aba_ativa = "📁 監査 Kan-sa (Pasta & Laudos Oficiais)"
-            st.rerun()
-
-        # Botões Rápidos no Card do Kan-sa
-        c_kbtn1, c_kbtn2 = st.columns(2)
-        if c_kbtn1.button("📥 Laudo 2025", key="btn_quick_pdf_2025", use_container_width=True):
-            st.session_state.aba_ativa = "📁 監査 Kan-sa (Pasta & Laudos Oficiais)"
-            st.session_state.ano_foco_kansa = "2025"
-            st.rerun()
-            
-        c_kbtn2.markdown(f"<a href='{SHAREPOINT_URL_HDW}' target='_blank' style='display: block; text-align: center; background: #0284c7; color: white; padding: 7px 4px; border-radius: 8px; text-decoration: none; font-size: 0.78rem; font-weight: 700;'>🌐 SharePoint ↗</a>", unsafe_allow_html=True)
-
-    # Identidade Soberana da Dai: O usuário interage unicamente com a DAI.
-    # Sem seletores técnicos ou dropdowns de modelos na interface.
-    with col_chat:
-        st.markdown(f"<h3 style='color: {cor_primaria}; margin-bottom: 2px;'>{titulo_chat}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color: #94a3b8; font-size: 0.95rem; margin-bottom: 12px;'>{subtitulo_chat}</p>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color: {cor_primaria}; margin-bottom: 2px;'>{titulo_chat}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color: #94a3b8; font-size: 0.95rem; margin-bottom: 12px;'>{subtitulo_chat}</p>", unsafe_allow_html=True)
 
     msg_boas_vindas = config.get("textos", {}).get("mensagem_boas_vindas", "Olá, sou a Dai, agente de triagem do Daisugi. Posso te ajudar diretamente, ou, te direcionar a alguma outra sala, me diga o que precisa.")
     if not st.session_state.messages:
@@ -666,32 +611,22 @@ if st.session_state.aba_ativa == "💬 Hall de Entrada (Recepção Dai)":
             "codigo_rastreamento": None
         }]
 
-    # Layout Dividido (Split-View Claude Artifacts) quando um documento está em análise
+    # Layout Dividido (Claude Style com Artefato/Renderizador à Esquerda)
     if st.session_state.get("active_artifact"):
-        chat_pane, artifact_pane = st.columns([1.15, 0.85], gap="medium")
+        # Suporte a expansão: quando expandido, o documento ocupa 75% e o chat 25%; quando normal, 50% / 50%
+        if st.session_state.get("artifact_expanded", False):
+            artifact_pane, chat_pane = st.columns([2.5, 1.0], gap="medium")
+        else:
+            artifact_pane, chat_pane = st.columns([1.0, 1.0], gap="medium")
     else:
-        chat_pane = st.container()
         artifact_pane = None
+        chat_pane = st.container()
 
     avatar_img = config.get("avatar", {}).get("imagem_lobby", "lobby_avatar.jpg")
     icone_usuario = config.get("avatar", {}).get("icone_usuario", "👤")
     dai_avatar = get_base64_image(avatar_img) if os.path.exists(avatar_img) else "👩🏻‍💼"
 
     with chat_pane:
-        st.markdown("<span style='font-size: 0.85rem; color: #94a3b8; font-weight: 600;'>💡 Sugestões de Atendimento Rápido:</span>", unsafe_allow_html=True)
-        qp1, qp2, qp3, qp4 = st.columns(4)
-        if qp1.button("💼 Visita Executiva", use_container_width=True):
-            st.session_state.quick_prompt_selecionado = "Olá Dai, estou recebendo uma visita executiva e preciso preparar o acesso e a sala de reuniões."
-            st.rerun()
-        if qp2.button("📄 Entregar CCB / Fatura", use_container_width=True):
-            st.session_state.quick_prompt_selecionado = "Preciso encaminhar uma CCB e fatura para validação na Quarentena da Controladoria."
-            st.rerun()
-        if qp3.button("🔍 Laudo Oficial Kan-sa", use_container_width=True):
-            st.session_state.quick_prompt_selecionado = "Gostaria de consultar o Laudo Colegiado Oficial de 2025 arquivado no HDW Soberano."
-            st.rerun()
-        if qp4.button("⚡ Diretrizes do Kigyou", use_container_width=True):
-            st.session_state.quick_prompt_selecionado = "Quais são as diretrizes de governança corporativa e POPs de medição vigentes no Kigyou?"
-            st.rerun()
 
         for idx_msg, message in enumerate(st.session_state.messages):
             av = dai_avatar if message["role"] == "assistant" else icone_usuario
@@ -910,11 +845,18 @@ O presente documento encontra-se liberado para visualização em tempo real na i
                 </div>
             """, unsafe_allow_html=True)
 
-            c_btn_a, c_btn_b = st.columns([1, 1])
-            if c_btn_a.button("✖ Fechar Painel", key="btn_close_artifact", use_container_width=True):
+            c_btn_a, c_btn_b, c_btn_c = st.columns([1, 1, 1])
+            if c_btn_a.button("✖ Fechar", key="btn_close_artifact", use_container_width=True):
                 st.session_state.active_artifact = None
+                st.session_state.artifact_expanded = False
                 st.rerun()
-            if c_btn_b.button("📁 Ver no Kan-sa", key="btn_goto_kansa_art", use_container_width=True):
+            
+            label_exp = "🗗 Restaurar" if st.session_state.get("artifact_expanded", False) else "🗖 Expandir"
+            if c_btn_b.button(label_exp, key="btn_toggle_expand_art", use_container_width=True):
+                st.session_state.artifact_expanded = not st.session_state.get("artifact_expanded", False)
+                st.rerun()
+
+            if c_btn_c.button("📁 Ver Kan-sa", key="btn_goto_kansa_art", use_container_width=True):
                 st.session_state.aba_ativa = "📁 監査 Kan-sa (Pasta & Laudos Oficiais)"
                 st.rerun()
 
