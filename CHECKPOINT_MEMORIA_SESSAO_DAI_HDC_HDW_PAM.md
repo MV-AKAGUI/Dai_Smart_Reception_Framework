@@ -51,13 +51,23 @@ Governança transitória por mapeamento determinístico enquanto o PAM central d
 
 ---
 
-## 4. Resgate do Sistema do PAM DAISUGI & Acervo Local de LLMs
-- **Sistema Central do PAM:** Localizado em `DAISUGI_TECNOLOGIAS\Daisugi_Ecosystem_Cofre-PAM-IGA` (`daisugi_vault_core.py`, `daisugi_auth_guard.py`, `CONTRATO_API_PAM_IGA.md`).
-- **Automação do Dr. Taylor Code:** Módulo [auditoria_soberana_dr_taylor.py](file:///c:/Users/Ronaldo%20Akagui.SUG00245/DAISUGI_TECNOLOGIAS/Dai_Smart_Reception_Framework/auditoria_soberana_dr_taylor.py) criado e commitado para emitir laudos criptográficos SHA-256 a cada novo módulo ou auditoria.
-- **Acervo de LLMs no Desktop (Zero Token Cost):**
-  - Ollama operante em `http://127.0.0.1:11434`.
-  - Modelos disponíveis: `qwen2.5-coder:7b`, `deepseek-r1:8b`, `saullm:latest`, `mistral-nemo:latest`, `qwen2.5:latest`, `llama3.1:latest`, `nomic-embed-text:latest`.
-  - MetaGPT parametrizado em `DAISUGI_TECNOLOGIAS\Meta_GPT_DAISUGI\config\config2.yaml` apontando para o endpoint local.
+## 5. Atualização Homologada: Front-End Split-Screen & LLM Open-Source Cloud
+- **Split-Screen Claude-Style:** Implementado no `app_chat_st.py` com navegação pericial à esquerda e chat ativo à direita.
+- **Detecção de Exercício / Ano:** Reconhecimento contextual de pedidos de laudos e relatórios de endividamento (ex: 2024, 2023, 2022, 2021) abrindo o respectivo exercício no Kan-sa.
+- **HDC Harness Humanizado & LLM Open-Source:**
+  - Remoção de mensagens mecânicas com colchetes e referências técnicas frias.
+  - Conector nativo para provedor Open-Source em Nuvem de latência ultrabaixa (Groq/Llama 3.1 8B) sem custos de tokens.
+  - Preservação estrita das travas de Closed-World Assumption e alçadas PAM-IGA no servidor.
+- **Deploy em Produção (Oracle OCI - 137.131.151.74):**
+  - Código injetado e ativo nos contêineres `dai_frontend_lobby` e `dai_backend_api`.
+  - Verificação com HTTP 200 OK em [https://dai.daisugi.com.br](https://dai.daisugi.com.br).
+
+---
+
+## 6. Governança Vibe Coding DAISUGI
+- Todo artefato e alteração no ecossistema segue a regra estrita de auto-sincronização com o repositório remoto Git.
+- Nenhuma alteração é deixada isolada em ambiente local.
+- Registro contínuo de decisões arquiteturais na memória soberana do projeto.
 
 ---
 
