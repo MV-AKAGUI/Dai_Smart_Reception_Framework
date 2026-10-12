@@ -28,58 +28,78 @@ except FileNotFoundError:
 
 API_BASE_URL = os.getenv("DAI_API_URL", "http://localhost:8001")
 
-DIR_HDW_TRANSITORIO = r"H:\Drives compartilhados\APLICAÇÕES - SUGOI-SA\02_APLICAÇÕES_E_SISTEMAS\DAISUGI\02_Daisugi_kan-sa\DATA_ROOM\HDW_TRANSITORIO\01_CONTROLADORIA_E_FINANCAS\M4_CONTROLE_ENDIVIDAMENTO"
+def encontrar_dir_hdw_soberano():
+    base_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DATA_ROOM", "HDW_TRANSITORIO", "01_CONTROLADORIA_E_FINANCAS", "M4_CONTROLE_ENDIVIDAMENTO")
+    if os.path.exists(base_local):
+        return base_local
+    for letter in ["H", "G"]:
+        root = f"{letter}:\\Drives compartilhados"
+        if not os.path.exists(root):
+            continue
+        try:
+            for f1 in os.listdir(root):
+                if "SUGOI" in f1:
+                    p1 = os.path.join(root, f1)
+                    for f2 in os.listdir(p1):
+                        p2 = os.path.join(p1, f2, "DAISUGI", "02_Daisugi_kan-sa", "DATA_ROOM", "HDW_TRANSITORIO", "01_CONTROLADORIA_E_FINANCAS", "M4_CONTROLE_ENDIVIDAMENTO")
+                        if os.path.exists(p2):
+                            return p2
+        except Exception:
+            pass
+    return r"H:\\Drives compartilhados\\APLICAÇÕES - SUGOI-SA\\02_APLICAÇÕES_E_SISTEMAS\\DAISUGI\\02_Daisugi_kan-sa\\DATA_ROOM\\HDW_TRANSITORIO\\01_CONTROLADORIA_E_FINANCAS\\M4_CONTROLE_ENDIVIDAMENTO"
+
+DIR_HDW_TRANSITORIO = encontrar_dir_hdw_soberano()
 SHAREPOINT_URL_HDW = "https://sugoiconstrutora.sharepoint.com/:f:/r/sites/DataHubDocumentalSUGOI/Documentos%20Compartilhados/SUGOI_HUB_GED/HUB_EXTERNO/00_REPOSIT%C3%93RIO/HDW-TRANSIT%C3%93RIO?d=waf9ad30eee2a4df3a15e018b4c2215f5&csf=1&web=1&e=DXEV88"
 
 DADOS_EXERCICIOS = {
+    "2021": {
+        "saldo_num": 21438000.0,
+        "saldo_str": "R$ 21.438.000,00",
+        "contratos": 7,
+        "amortizacao": "Amortização Líquida: R$ 2.762.000,00",
+        "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2021_b9cba3dd.pdf",
+        "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2021_b9cba3dd.html",
+        "credores": "Banco ABC Brasil, Banco Pine, Caixa Econômica, Daycoval",
+        "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
+    },
+    "2022": {
+        "saldo_num": 36098000.0,
+        "saldo_str": "R$ 36.098.000,00",
+        "contratos": 7,
+        "amortizacao": "Captação Líquida: R$ 14.660.000,00",
+        "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2022_eec00807.pdf",
+        "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2022_eec00807.html",
+        "credores": "Red Asset, Banco ABC Brasil, Banco Pine, Caixa Econômica",
+        "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
+    },
+    "2023": {
+        "saldo_num": 113358000.0,
+        "saldo_str": "R$ 113.358.000,00",
+        "contratos": 7,
+        "amortizacao": "Emissão Estruturada CRI: R$ 77.260.000,00",
+        "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2023_2878148d.pdf",
+        "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2023_2878148d.html",
+        "credores": "Opea Securitizadora, Banco Safra, Banco ABC Brasil, Caixa Econômica",
+        "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
+    },
+    "2024": {
+        "saldo_num": 174667339.20,
+        "saldo_str": "R$ 174.667.339,20",
+        "contratos": 29,
+        "amortizacao": "Serviço Mensal Médio: R$ 2.180.000,00/mês",
+        "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2024_53b09e63.pdf",
+        "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2024_53b09e63.html",
+        "credores": "Opea (CRI 1ª e 2ª Séries), Safra, ABC Brasil, Paulista, CCBs",
+        "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
+    },
     "2025": {
         "saldo_num": 74738500.0,
         "saldo_str": "R$ 74.738.500,00",
         "contratos": 4,
-        "amortizacao": "R$ 16.219.000,00",
+        "amortizacao": "Amortização Projetada: R$ 16.219.000,00",
         "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2025_9ee82142.pdf",
         "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2025_9ee82142.html",
-        "credores": "Banco Daycoval, Banco Sofisa, CRI Habitasec, CRI True",
-        "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
-    },
-    "2024": {
-        "saldo_num": 90957500.0,
-        "saldo_str": "R$ 90.957.500,00",
-        "contratos": 5,
-        "amortizacao": "R$ 23.331.167,00",
-        "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2024_7b63dd77.pdf",
-        "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2024_7b63dd77.html",
-        "credores": "Daycoval, Sofisa, Habitasec, True, CCB Fiança",
-        "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
-    },
-    "2023": {
-        "saldo_num": 114288667.0,
-        "saldo_str": "R$ 114.288.667,00",
-        "contratos": 6,
-        "amortizacao": "R$ 24.511.333,00",
-        "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2023_2878148d.pdf",
-        "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2023_2878148d.html",
-        "credores": "Daycoval, Sofisa, Habitasec, True, Safra, Santander",
-        "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
-    },
-    "2022": {
-        "saldo_num": 138800000.0,
-        "saldo_str": "R$ 138.800.000,00",
-        "contratos": 7,
-        "amortizacao": "R$ 26.650.000,00",
-        "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2022_eec00807.pdf",
-        "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2022_eec00807.html",
-        "credores": "Daycoval, Sofisa, Habitasec, True, Safra, Santander, CCB Capital de Giro",
-        "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
-    },
-    "2021": {
-        "saldo_num": 165450000.0,
-        "saldo_str": "R$ 165.450.000,00",
-        "contratos": 8,
-        "amortizacao": "Base Inicial de Partida",
-        "pdf_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2021_b9cba3dd.pdf",
-        "html_default": "LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_2021_b9cba3dd.html",
-        "credores": "Daycoval, Sofisa, Habitasec, True, Safra, Santander, Itaú, Bradesco",
+        "credores": "Opea Securitizadora, Santander, ABC Brasil, Daycoval",
         "veredito": "HOMOLOGADO COM EFICÁCIA PLENA (Diferença R$ 0,0000)"
     }
 }
@@ -126,10 +146,10 @@ def renderizar_pasta_kansa(prefixo_key: str = "kansa"):
     st.markdown("<p style='color: #94a3b8; font-size: 0.88rem;'>Trajetória pericial da dívida bancária e mercado de capitais nos 5 exercícios auditados.</p>", unsafe_allow_html=True)
 
     col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-    col_m1.metric("Dívida Inicial (2021)", "R$ 165,45 M", "8 Contratos")
-    col_m2.metric("Dívida Atual (2025)", "R$ 74,74 M", "-54,8% Desalavancagem")
-    col_m3.metric("Total Amortizado", "R$ 90,71 M", "4 Operações Quitadas")
-    col_m4.metric("Auditoria Colegiada", "100% Homologado", "Diferença R$ 0,00")
+    col_m1.metric("Base Histórica (2021)", "R$ 21,44 M", "7 Contratos (T0)")
+    col_m2.metric("Pico de Captação (2024)", "R$ 174,67 M", "29 Contratos Ativos")
+    col_m3.metric("Posição Atual (2025)", "R$ 74,74 M", "-57,2% Desalavancagem pós-2024")
+    col_m4.metric("Auditoria Colegiada", "100% Homologado", "Diferença R$ 0,0000")
 
     # Filtro Interativo de Período
     anos_disponiveis = ["2021", "2022", "2023", "2024", "2025"]
@@ -190,7 +210,7 @@ def renderizar_pasta_kansa(prefixo_key: str = "kansa"):
         </div>
         """, unsafe_allow_html=True)
 
-        c_btn_pdf, c_btn_html, c_btn_acordao = st.columns([1.4, 1.3, 1.2])
+        c_btn_pdf, c_btn_html_dl, c_btn_html_link, c_btn_acordao = st.columns([1.3, 1.2, 1.2, 1.0])
 
         with c_btn_pdf:
             if pdf_path and os.path.exists(pdf_path):
@@ -211,35 +231,45 @@ def renderizar_pasta_kansa(prefixo_key: str = "kansa"):
             else:
                 st.button(f"⚠️ PDF {ano} Indisponível", disabled=True, use_container_width=True, key=f"btn_dis_pdf_{ano}_{prefixo_key}")
 
-        with c_btn_html:
-            if html_path and os.path.exists(html_path):
-                try:
-                    with open(html_path, "rb") as hf:
-                        bytes_html = hf.read()
-                    st.download_button(
-                        label=f"💾 HTML {ano}",
-                        data=bytes_html,
-                        file_name=f"LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_{ano}.html",
-                        mime="text/html",
-                        key=f"btn_dl_html_{ano}_{prefixo_key}",
-                        use_container_width=True
-                    )
-                except Exception as err:
-                    st.error(f"Erro ao ler HTML: {err}")
+        html_b64 = ""
+        html_content = ""
+        if html_path and os.path.exists(html_path):
+            try:
+                with open(html_path, "r", encoding="utf-8") as hf:
+                    html_content = hf.read()
+                html_b64 = base64.b64encode(html_content.encode("utf-8")).decode("utf-8")
+            except Exception:
+                pass
+
+        with c_btn_html_dl:
+            if html_content:
+                st.download_button(
+                    label=f"💾 Baixar HTML",
+                    data=html_content.encode("utf-8"),
+                    file_name=f"LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_{ano}.html",
+                    mime="text/html",
+                    key=f"btn_dl_html_{ano}_{prefixo_key}",
+                    use_container_width=True
+                )
             else:
-                st.button(f"⚠️ HTML {ano} Indisponível", disabled=True, use_container_width=True, key=f"btn_dis_html_{ano}_{prefixo_key}")
+                st.button(f"⚠️ HTML Indisponível", disabled=True, use_container_width=True, key=f"btn_dis_html_{ano}_{prefixo_key}")
+
+        with c_btn_html_link:
+            if html_b64:
+                st.markdown(
+                    f"<a href='data:text/html;base64,{html_b64}' target='_blank' style='display: block; text-align: center; background: #0284c7; color: white; padding: 7px 4px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: 700;'>🌐 Abrir HTML ↗</a>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.caption("Link N/D")
 
         with c_btn_acordao:
-            ver_acordao = st.checkbox(f"⚖️ Acórdão {ano}", key=f"cb_acordao_{ano}_{prefixo_key}")
+            ver_acordao = st.checkbox(f"⚖️ Acórdão", key=f"cb_acordao_{ano}_{prefixo_key}")
 
-        with st.expander(f"👁️ Visualizar Relatório Web Interativo Completo — {ano}", expanded=False):
-            if html_path and os.path.exists(html_path):
-                try:
-                    with open(html_path, "r", encoding="utf-8") as hf:
-                        html_content = hf.read()
-                    st.components.v1.html(html_content, height=600, scrolling=True)
-                except Exception as e:
-                    st.error(f"Falha ao carregar HTML: {e}")
+        # Renderização do Relatório Web Interativo Completo
+        with st.expander(f"👁️ Visualizar Relatório Web Interativo — Exercício {ano}", expanded=False):
+            if html_content:
+                st.components.v1.html(html_content, height=650, scrolling=True)
             else:
                 st.info("Arquivo HTML não localizado nesta pasta.")
 
@@ -809,27 +839,19 @@ if st.session_state.aba_ativa == "💬 Hall de Entrada (Recepção Dai)":
                     with c_att2:
                         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
                         if st.button("Abrir Painel ➔", key=f"btn_art_dw_{idx_msg}", use_container_width=True):
+                            ano_alvo_msg = "2025"
+                            c_tit = dw.get('titulo', '')
+                            for y in ["2021", "2022", "2023", "2024", "2025"]:
+                                if y in c_tit:
+                                    ano_alvo_msg = y
+                                    break
                             st.session_state.active_artifact = {
-                                "tipo": "hdw_doc",
-                                "titulo": dw.get('titulo', 'Documento HDW'),
-                                "cota": dw.get('cota', 'EST-01-KANSA-2025'),
+                                "tipo": "laudo_html",
+                                "ano": ano_alvo_msg,
+                                "titulo": dw.get('titulo', f'Laudo Executivo M4 — {ano_alvo_msg} (Controle de Endividamento)'),
+                                "cota": dw.get('cota', f'EST-01-KANSA-{ano_alvo_msg}-M4'),
                                 "hash": dw.get('hash', 'e24de050a3f8a4e320f77bc954f62024765d1dcb74c43169f4bc7210e74bcfc4'),
-                                "origem": "CentOS 7 - 10.8.0.1:8000",
-                                "conteudo": f"""# 🏛️ ACÓRDÃO & LAUDO PERICIAL KAN-SA 2025
-**Tribunal Pericial Soberano - Duplo Grau de Jurisdição**
-
-- **Cota MARC/HDW:** `{dw.get('cota', 'EST-01-KANSA-2025')}`
-- **Custódia Forense:** Hudson Data Warehouse (CentOS 7 - 10.8.0.1:8000)
-- **Hash Criptográfico SHA-256:** `{dw.get('hash', 'e24de050a3f8a4e320f77bc954f62024')}`
-- **Status:** Custodiado, Inviolável e Homologado pelo Colegiado.
-
----
-### 1. Resumo Executivo das Demonstrações Financeiras
-As análises periciais do exercício contábil e fiduciário de 2025 atestam a conformidade dos módulos Kan-sa e Kigyou, com validação de SoD (Segregação de Funções) sob o ecossistema Daisugi.
-
-### 2. Parecer Técnico da DAI
-O presente documento encontra-se liberado para visualização em tempo real na interface dividida com verificação instantânea no HDW.
-"""
+                                "origem": "CentOS 7 - 10.8.0.1:8000"
                             }
                             st.rerun()
 
@@ -943,9 +965,10 @@ O presente documento encontra-se liberado para visualização em tempo real na i
                                 "hash": "e24de050a3f8a4e320f77bc954f62024765d1dcb74c43169f4bc7210e74bcfc4"
                             }
                             st.session_state.active_artifact = {
-                                "tipo": "kansa_folder",
-                                "titulo": f"Pasta Oficial Kan-sa — Exercício {ano_alvo}",
-                                "cota": f"EST-01-KANSA-{ano_alvo}",
+                                "tipo": "laudo_html",
+                                "ano": ano_alvo,
+                                "titulo": f"Laudo Executivo M4 — {ano_alvo} (Controle de Endividamento)",
+                                "cota": f"EST-01-KANSA-{ano_alvo}-M4",
                                 "hash": "e24de050a3f8a4e320f77bc954f62024765d1dcb74c43169f4bc7210e74bcfc4",
                                 "origem": "Hudson Data Warehouse (CentOS 7 - 10.8.0.1:8000)"
                             }
@@ -985,6 +1008,9 @@ O presente documento encontra-se liberado para visualização em tempo real na i
     # ==========================================================
     if artifact_pane and st.session_state.get("active_artifact"):
         art = st.session_state.active_artifact
+        ano_doc = str(art.get("ano", "2025"))
+        pdf_doc, html_doc, acordao_doc = obter_arquivos_exercicio(ano_doc)
+
         with artifact_pane:
             st.markdown(f"""
             <div class='artifact-container'>
@@ -1013,19 +1039,71 @@ O presente documento encontra-se liberado para visualização em tempo real na i
                 st.rerun()
 
             st.markdown("---")
-            st.markdown(f"**Cota Canônica:** `{art.get('cota', 'EST-01-DOC')}`")
+            
+            # Carregar conteúdo HTML para o laudo se existir
+            conteudo_html = ""
+            html_b64_art = ""
+            if html_doc and os.path.exists(html_doc):
+                try:
+                    with open(html_doc, "r", encoding="utf-8") as hf:
+                        conteudo_html = hf.read()
+                    html_b64_art = base64.b64encode(conteudo_html.encode("utf-8")).decode("utf-8")
+                except Exception as ex_h:
+                    st.warning(f"Aviso ao ler HTML: {ex_h}")
+
+            # Barra de Ações Rápidas do Laudo Ativo
+            c_act1, c_act2, c_act3 = st.columns([1.2, 1.2, 1.2])
+            with c_act1:
+                if html_b64_art:
+                    st.markdown(
+                        f"<a href='data:text/html;base64,{html_b64_art}' target='_blank' style='display: block; text-align: center; background: #0284c7; color: white; padding: 7px 6px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: 700;'>🌐 Abrir HTML ↗</a>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.caption("Link HTML N/D")
+
+            with c_act2:
+                if pdf_doc and os.path.exists(pdf_doc):
+                    try:
+                        with open(pdf_doc, "rb") as pf:
+                            b_pdf = pf.read()
+                        st.download_button(
+                            label=f"📥 Baixar PDF ({len(b_pdf)/1024/1024:.1f}MB)",
+                            data=b_pdf,
+                            file_name=f"LAUDO_EXECUTIVO_M4_CONTROLE_ENDIVIDAMENTO_{ano_doc}.pdf",
+                            mime="application/pdf",
+                            key="btn_dl_pdf_artifact_pane",
+                            use_container_width=True,
+                            type="primary"
+                        )
+                    except Exception:
+                        st.button("⚠️ PDF N/D", disabled=True, use_container_width=True, key="btn_dis_pdf_art")
+                else:
+                    st.button("⚠️ PDF N/D", disabled=True, use_container_width=True, key="btn_dis_pdf_art")
+
+            with c_act3:
+                st.markdown(
+                    f"<a href='{SHAREPOINT_URL_HDW}' target='_blank' style='display: block; text-align: center; background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 7px 4px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; font-weight: 700;'>📂 SharePoint ↗</a>",
+                    unsafe_allow_html=True
+                )
+
+            st.markdown(f"**Cota Canônica:** `{art.get('cota', f'EST-01-KANSA-{ano_doc}-M4')}`")
             st.markdown(f"**Hash SHA-256:** `{art.get('hash', 'e24de050a3f8a4e320f77bc954f62024')}`")
             st.markdown("---")
             
-            # Exibição do Conteúdo do Documento ou da Pasta Kan-sa
+            # Exibição do Conteúdo do Documento no Quadrante
             if art.get("tipo") == "kansa_folder":
                 renderizar_pasta_kansa("painel_lateral")
+            elif art.get("tipo") in ["hdw_doc", "laudo_html", "laudo_m4"] or conteudo_html:
+                if conteudo_html:
+                    st.components.v1.html(conteudo_html, height=650, scrolling=True)
+                else:
+                    st.markdown(art.get("conteudo", "Conteúdo não disponível."))
             else:
                 st.markdown(art.get("conteudo", "Conteúdo não disponível."))
             
             st.markdown("</div>", unsafe_allow_html=True)
 
-# ==========================================
 # ABA HDW: BIBLIOTECA MULTIDISCIPLINAR E CUSTÓDIA SOBERANA
 # ==========================================
 elif st.session_state.aba_ativa == "🏛️ Biblioteca HDW (Custódia Soberana)":
