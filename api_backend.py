@@ -121,7 +121,7 @@ def get_db_connection():
         port=os.getenv("DB_PORT", "5432"),
         database=os.getenv("DB_NAME", "memoria_vetorial"),
         user=os.getenv("DB_USER", "admin"),
-        password=os.getenv("DB_PASSWORD", "masterkey123"),
+        password=os.environ["DB_PASSWORD"],
         connect_timeout=5
     )
 

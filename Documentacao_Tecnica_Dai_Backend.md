@@ -277,6 +277,6 @@ O backend é 100% configurável via variáveis de ambiente, permitindo transiç�
 | `DB_PORT` | `5432` | Porta TCP do PostgreSQL. |
 | `DB_NAME` | `memoria_vetorial` | Nome do banco relacional com extensão `pgvector`. |
 | `DB_USER` | `admin` | Usuário com permissão DDL e DML. |
-| `DB_PASSWORD` | `masterkey123` | Senha do usuário do banco de dados. |
+| `DB_PASSWORD` | (cofre Infisical) | Senha do usuário do banco de dados. |
 | `OLLAMA_HOST` | `http://localhost:11434` | Endpoint do serviço Ollama para geração de embeddings. |
 | `EMBED_MODEL` | `nomic-embed-text` | Modelo de embedding a ser invocado pelo LangChain. |

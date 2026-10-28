@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-memoria_vetorial}
       POSTGRES_USER: ${DB_USER:-admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-masterkey123}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?suba com infisical run -- docker compose up -d}
     ports:
       - "5432:5432"
     volumes:
@@ -40,7 +40,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-memoria_vetorial}
       - DB_USER=${DB_USER:-admin}
-      - DB_PASSWORD=${DB_PASSWORD:-masterkey123}
+      - DB_PASSWORD=${DB_PASSWORD:?suba com infisical run -- docker compose up -d}
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
       - EMBED_MODEL=${EMBED_MODEL:-nomic-embed-text}
       - HDW_HOST=${HDW_HOST:-10.8.0.1}
