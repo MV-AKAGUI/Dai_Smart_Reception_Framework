@@ -26,7 +26,7 @@ try:
 except FileNotFoundError:
     config = {}
 
-API_BASE_URL = os.getenv("DAI_API_URL", "http://localhost:8001")
+API_BASE_URL = os.getenv("DAI_API_URL", "http://localhost:8010")
 
 def encontrar_dir_hdw_soberano():
     base_local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DATA_ROOM", "HDW_TRANSITORIO", "01_CONTROLADORIA_E_FINANCAS", "M4_CONTROLE_ENDIVIDAMENTO")
@@ -631,11 +631,11 @@ if not st.session_state.autenticado:
             if c_chips_4[idx].button(label, key=f"chip4_{label}_{idx}", use_container_width=True):
                 st.session_state.quick_user = user_val
 
-        default_usuario = st.session_state.get("quick_user", "ronaldo.akagui@sugoisa.com.br")
+        default_usuario = st.session_state.get("quick_user", "ronaldoakagui")
 
         with st.form("login_form"):
-            usuario = st.text_input("Cadeira / Usuário PAM (ou E-mail Corporativo)", value=default_usuario).lower().strip()
-            senha = st.text_input("Senha Corporativa / RG Cadastrado", type="password", help="Para cadeiras registradas, digite seu número de RG ou senha de contingência.")
+            usuario = st.text_input("Operador Soberano (ou E-mail)", value=default_usuario).lower().strip()
+            senha = st.text_input("Senha Soberana", type="password", help="Digite sua senha cadastrada no Cofre Infisical.")
             submit_btn = st.form_submit_button("Entrar no Lobby da Dai", use_container_width=True)
             
             if submit_btn:
@@ -649,7 +649,7 @@ if not st.session_state.autenticado:
                         st.session_state.paciente_perfil = dados.get("perfil", "Desconhecido")
                         st.session_state.salas_liberadas = dados.get("salas_liberadas", [])
                         st.session_state.clientes_acesso = dados.get("clientes_acesso", [])
-                        st.session_state.token_jwt = dados.get("token_jwt", "")
+                        st.session_state.token_jwt = dados.get("token_jwt") or dados.get("token", "")
                         
                         cod_tkt = f"TKT-DAI-2026-{usuario[:3].upper()}-{int(time.time()) % 10000}"
                         st.session_state.ticket_atual = {
