@@ -86,7 +86,7 @@ def verificar_senha_soberana(senha_digitada: str) -> bool:
 
 def criar_token_soberano(usuario: str, expires_in: int = 28800) -> str:
     """Emite token JWT com perfil core_developer e TTL de 28800s (8 horas)."""
-    secret = os.getenv("DAISUGI_JWT_SECRET", "daisugi_master_vault_secret_key_2026")
+    secret = os.environ["DAISUGI_JWT_SECRET"]
     now = int(time.time())
     payload = {
         "sub": usuario,
@@ -107,7 +107,7 @@ class DaisugiAuthGuard:
 
     @property
     def secret_key(self) -> str:
-        return self._secret_key or os.getenv("DAISUGI_JWT_SECRET", "daisugi_master_vault_secret_key_2026")
+        return self._secret_key or os.environ["DAISUGI_JWT_SECRET"]
 
     def generate_token(self, payload: Dict[str, Any], expires_in: int = 28800) -> str:
         """Emite token JWT criptograficamente assinado com claims oficiais do PAM/IGA."""
