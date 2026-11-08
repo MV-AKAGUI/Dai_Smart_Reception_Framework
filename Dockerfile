@@ -16,9 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Cópia do código-fonte e assets
 COPY . /app
 
-EXPOSE 8001
+EXPOSE 8010
 
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8001
+ENV PORT=8010
 
 CMD ["python", "api_backend.py"]
