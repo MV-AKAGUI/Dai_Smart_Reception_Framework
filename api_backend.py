@@ -149,24 +149,6 @@ def setup_enterprise_database():
             cur.execute(f"INSERT INTO clientes (id, nome) VALUES ('{c}', '{c.capitalize()}') ON CONFLICT DO NOTHING;")
             cur.execute(f"CREATE TABLE IF NOT EXISTS memoria_{c} (id SERIAL PRIMARY KEY, texto_original TEXT, resolucao_contexto TEXT, embedding vector(768), destino TEXT, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
 
-        cur.execute("""
-            INSERT INTO usuarios (id, login, senha, nome, perfil) 
-            VALUES (1, 'admin', '123', 'Administrador Operador', 'admin'),
-                   (3, 'cliente', '123', 'Cliente Teste', 'cliente'),
-                   (4, 'controller', '123', 'Controller Geral (Checker SoD)', 'admin'),
-                   (5, 'advogado', '123', 'Advogado Imobiliário', 'admin'),
-                   (6, 'engenheiro', '123', 'Engenheiro da Obra (Maker)', 'cliente'),
-                   (7, 'diretor', '123', 'Diretor Presidente', 'admin')
-            ON CONFLICT (id) DO NOTHING;
-        """)
-        cur.execute("""
-            INSERT INTO usuario_clientes (id_usuario, id_cliente)
-            VALUES (1, 'controladoria'), (1, 'juridico'), (3, 'controladoria'),
-                   (4, 'controladoria'), (4, 'juridico'), (5, 'juridico'),
-                   (6, 'controladoria'), (7, 'controladoria'), (7, 'juridico')
-            ON CONFLICT (id_usuario, id_cliente) DO NOTHING;
-        """)
-
         conn.commit()
         cur.close()
         conn.close()
@@ -199,17 +181,14 @@ def login(request: LoginRequest):
             return LoginResponse(
                 autenticado=True,
                 id_usuario=99,
-                nome="Ronaldo Akagui (Core Developer)",
+                nome="Ronaldo Akagui (Soberania Core)",
                 perfil="core_developer",
                 salas_liberadas=[
                     Sala(nome="Soberania de Código Core", funcao="Acesso Mestre Akagui", cor="#8B5CF6"),
-                    Sala(nome="Painel Quarentena", funcao="Auditoria Total Kan-sa", cor="#EF4444"),
-                    Sala(nome="Consultório Dr. Qwen Coder", funcao="Engenharia de Software & Python 3.11", cor="#3B82F6"),
-                    Sala(nome="Consultório Dr. DeepSeek-R1", funcao="Processos BPMN, POPs e ITs", cor="#10B981"),
-                    Sala(nome="Consultório Dra. Fiscal", funcao="ICMS, PIS/COFINS, SPED e Reforma", cor="#F59E0B"),
-                    Sala(nome="Consultório Dr. Precedente", funcao="Jurisprudência & Precedentes STF/STJ", cor="#8B5CF6")
+                    Sala(nome="Painel Quarentena", funcao="Auditoria e Governança", cor="#EF4444"),
+                    Sala(nome="Governança de Travas ERP", funcao="Controle de Travas", cor="#F59E0B")
                 ],
-                clientes_acesso=["sugoi", "daisugi"],
+                clientes_acesso=["presidencia", "controladoria", "financeiro", "operacoes", "engenharia", "gg", "ti"],
                 token_jwt=dev_token,
                 token=dev_token
             )
