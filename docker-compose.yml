@@ -41,6 +41,8 @@ services:
       - DB_NAME=${DB_NAME:-memoria_vetorial}
       - DB_USER=${DB_USER:-admin}
       - DB_PASSWORD=${DB_PASSWORD:?suba com infisical run -- docker compose up -d}
+      - DAISUGI_JWT_SECRET=${DAISUGI_JWT_SECRET:?suba com infisical run -- docker compose up -d}
+      - DAISUGI_SOVEREIGN_PASS_HASH=${DAISUGI_SOVEREIGN_PASS_HASH:?suba com infisical run -- docker compose up -d}
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
       - EMBED_MODEL=${EMBED_MODEL:-nomic-embed-text}
       - HDW_HOST=${HDW_HOST:-10.8.0.1}
