@@ -17,11 +17,12 @@ def extrair_segredos_historicos() -> dict[str, str]:
             check=True
         )
         for linha in res_compose.stdout.splitlines():
-            m = re.search(r"^\s*-\s*(HDW_API_KEY|OVPN_TOKEN)\s*=\s*(.+)$", linha) or \
-                re.search(r"^\s*(HDW_API_KEY|OVPN_TOKEN)\s*:\s*(.+)$", linha)
+            m = re.search(r"(HDW_API_KEY|OVPN_TOKEN)[^\n]*?:-([^}]+)\}", linha)
             if m:
                 var = m.group(1).strip()
                 val = m.group(2).strip().strip("'\"")
+                if val.startswith("${"):
+                    raise RuntimeError("Valor extraído não pode começar com '${'")
                 segredos[var] = val
     except Exception:
         pass
@@ -47,6 +48,10 @@ def extrair_segredos_historicos() -> dict[str, str]:
 
     if "HDW_API_KEY" not in segredos or "OVPN_TOKEN" not in segredos:
         raise RuntimeError("Não foi possível extrair todas as credenciais históricas do commit ce6c3b0")
+
+    for k, v in segredos.items():
+        if v.startswith("${"):
+            raise RuntimeError("Valor extraído não pode começar com '${'")
 
     return segredos
 
