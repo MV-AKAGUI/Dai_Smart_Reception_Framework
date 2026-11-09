@@ -17,7 +17,7 @@
   - Conexão validada via `curl http://10.8.0.1:8000/health` $\rightarrow$ `{"status":"ok"}` com **64.75ms de latência**.
   - Roteamento blindado contra sequestro de default gateway (`pull-filter ignore "redirect-gateway"`).
 - **Ponto Pendente com a TI da SUGOI (HDW Linux 192.168.1.122 / 10.8.0.1):**
-  - Chave de API `38925b32ce108ddf4cda7d54cabc3cb9acc56e3c8b58fbd3ea8cf6327921e862` retornou `401 Chave de API invalida ou ausente`.
+  - Chave de API `<revogado>` retornou `401 Chave de API invalida ou ausente`.
   - TI precisa recarregar o FastAPI no Linux ou confirmar a chave após finalizar a subida da carga física dos arquivos no acervo.
 
 ---
