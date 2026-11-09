@@ -30,8 +30,8 @@ HDW_PORT = int(os.getenv("HDW_PORT", "8000"))  # Porta oficial da API Hudson S1 
 HDW_BASE_URL = os.getenv("HDW_BASE_URL", f"http://{HDW_HOST}:{HDW_PORT}")
 
 # Token da OpenVPN e Chave de API da Custódia Soberana
-OVPN_TOKEN = os.getenv("OVPN_TOKEN", "Dai-Web_HDC_HDW")
-HDW_API_KEY = os.getenv("HDW_API_KEY", os.getenv("OVPN_TOKEN", "Dai-Web_HDC_HDW"))
+OVPN_TOKEN = os.getenv("OVPN_TOKEN")
+HDW_API_KEY = os.getenv("HDW_API_KEY")
 HDW_TIMEOUT = float(os.getenv("HDW_TIMEOUT_SECONDS", "10.0"))
 
 CHUNK_SIZE = 1024 * 1024  # 1 MiB (Preservação estrita de RAM no servidor Linux CentOS 7)
@@ -44,7 +44,7 @@ class HdcHdwBridge:
     validação contínua da cadeia de custódia na rota /authenticity.
     """
 
-    def __init__(self, base_url: str = HDW_BASE_URL, api_key: str = HDW_API_KEY):
+    def __init__(self, base_url: str = HDW_BASE_URL, api_key: Optional[str] = HDW_API_KEY):
         self.base_url = base_url
         self.api_key = api_key
         self.headers = {
