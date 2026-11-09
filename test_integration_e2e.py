@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+import re
 import jwt
 import pytest
 from fastapi.testclient import TestClient
@@ -227,3 +228,245 @@ def test_ca17_startup_api_sem_variaveis_hdw():
     ]
     res = subprocess.run(cmd, env=env_limpo, capture_output=True, text=True, timeout=30)
     assert res.returncode == 0, f"Falha no startup sem variáveis HDW: {res.stderr}\n{res.stdout}"
+
+
+# ==============================================================================
+# TESTES DA MISSÃO 0b2 — TRAVA DE SEGREDOS REVOGADOS HDW/OVPN (CA-01 A CA-08)
+# ==============================================================================
+
+
+def test_ca01_missao_0b2_script_gerar_hashes_revogados():
+    """CA-01: scripts/gerar_hashes_revogados.py extrai hashes do commit ce6c3b0 e emite saída canônica."""
+    script_path = Path("scripts/gerar_hashes_revogados.py")
+    assert script_path.exists(), "scripts/gerar_hashes_revogados.py não encontrado"
+    res = subprocess.run([sys.executable, str(script_path)], capture_output=True, text=True, timeout=30)
+    assert res.returncode == 0, f"Script falhou com código {res.returncode}: {res.stderr}"
+    assert res.stdout == "2 hashes gravados\n", f"Saída inesperada do script: {repr(res.stdout)}"
+    assert Path("segredos_revogados.sha256").exists(), "segredos_revogados.sha256 não foi gerado pelo script"
+
+
+def test_ca02_missao_0b2_formato_segredos_revogados():
+    """CA-02: Formato de segredos_revogados.sha256 obedece rigorosamente à regex canônica."""
+    lista_path = Path("segredos_revogados.sha256")
+    assert lista_path.exists(), "segredos_revogados.sha256 não encontrado"
+    linhas = [linha.strip() for linha in lista_path.read_text(encoding="utf-8").splitlines() if linha.strip()]
+    assert len(linhas) == 2, f"Arquivo segredos_revogados.sha256 deve conter exatamente 2 linhas, possui {len(linhas)}"
+    padrao = re.compile(r"^[a-f0-9]{64} \d+ (HDW_API_KEY|OVPN_TOKEN)$")
+    variaveis = set()
+    for linha in linhas:
+        assert padrao.match(linha), f"Linha fora do padrão canônico: {linha}"
+        variaveis.add(linha.split()[2])
+    assert variaveis == {"HDW_API_KEY", "OVPN_TOKEN"}, f"Variáveis esperadas não encontradas: {variaveis}"
+
+
+def test_ca03_missao_0b2_trava_lista_ausente_e_invalida_sintetico(tmp_path):
+    """CA-03: verificar_revogados levanta RuntimeError canônico para lista ausente ou inválida (sintético)."""
+    import hdc_hdw_bridge
+    verificar_revogados = getattr(hdc_hdw_bridge, "verificar_revogados", None)
+    assert verificar_revogados is not None, "Função verificar_revogados não implementada em hdc_hdw_bridge"
+
+    # Caso 1: Lista ausente
+    arquivo_ausente = tmp_path / "lista_ausente.sha256"
+    with pytest.raises(RuntimeError) as exc_ausente:
+        verificar_revogados(caminho_lista=arquivo_ausente, ambiente={})
+    assert str(exc_ausente.value) == "lista de revogados ausente"
+
+    # Caso 2: Lista vazia
+    arquivo_vazio = tmp_path / "lista_vazia.sha256"
+    arquivo_vazio.write_text("", encoding="utf-8")
+    with pytest.raises(RuntimeError) as exc_vazio:
+        verificar_revogados(caminho_lista=arquivo_vazio, ambiente={})
+    assert str(exc_vazio.value) == "lista de revogados inválida"
+
+    # Caso 3: Linha malformada / fora da regex
+    arquivo_invalido = tmp_path / "lista_invalida.sha256"
+    arquivo_invalido.write_text("hash_invalido 10 VAR_DESCONHECIDA\n", encoding="utf-8")
+    with pytest.raises(RuntimeError) as exc_invalido:
+        verificar_revogados(caminho_lista=arquivo_invalido, ambiente={})
+    assert str(exc_invalido.value) == "lista de revogados inválida"
+
+
+def test_ca04_missao_0b2_trava_credencial_revogada_sintetico(tmp_path):
+    """CA-04: verificar_revogados levanta RuntimeError canônico para credencial revogada (sintético)."""
+    import hdc_hdw_bridge
+    verificar_revogados = getattr(hdc_hdw_bridge, "verificar_revogados", None)
+    assert verificar_revogados is not None, "Função verificar_revogados não implementada em hdc_hdw_bridge"
+
+    # Valores sintéticos de teste (sem segredos reais)
+    val_sint_hdw = "sintetico_hdw_segredo_teste_123"
+    val_sint_ovpn = "sintetico_ovpn_token_teste_456"
+    hash_hdw = hashlib.sha256(val_sint_hdw.encode("utf-8")).hexdigest()
+    hash_ovpn = hashlib.sha256(val_sint_ovpn.encode("utf-8")).hexdigest()
+
+    lista_sintetica = tmp_path / "segredos_sinteticos.sha256"
+    lista_sintetica.write_text(
+        f"{hash_hdw} {len(val_sint_hdw)} HDW_API_KEY\n{hash_ovpn} {len(val_sint_ovpn)} OVPN_TOKEN\n",
+        encoding="utf-8"
+    )
+
+    # Teste de bloqueio de HDW_API_KEY
+    with pytest.raises(RuntimeError) as exc_hdw:
+        verificar_revogados(caminho_lista=lista_sintetica, ambiente={"HDW_API_KEY": val_sint_hdw})
+    assert str(exc_hdw.value) == "credencial revogada: HDW_API_KEY"
+
+    # Teste de bloqueio de OVPN_TOKEN
+    with pytest.raises(RuntimeError) as exc_ovpn:
+        verificar_revogados(caminho_lista=lista_sintetica, ambiente={"OVPN_TOKEN": val_sint_ovpn})
+    assert str(exc_ovpn.value) == "credencial revogada: OVPN_TOKEN"
+
+
+def test_ca05_missao_0b2_inicializacao_sem_credenciais_sintetico(tmp_path):
+    """CA-05: verificar_revogados conclui sem exceção quando credenciais estão ausentes ou vazias (sintético)."""
+    import hdc_hdw_bridge
+    verificar_revogados = getattr(hdc_hdw_bridge, "verificar_revogados", None)
+    assert verificar_revogados is not None, "Função verificar_revogados não implementada em hdc_hdw_bridge"
+
+    val_sint_hdw = "sintetico_hdw_teste"
+    val_sint_ovpn = "sintetico_ovpn_teste"
+    hash_hdw = hashlib.sha256(val_sint_hdw.encode("utf-8")).hexdigest()
+    hash_ovpn = hashlib.sha256(val_sint_ovpn.encode("utf-8")).hexdigest()
+
+    lista_sintetica = tmp_path / "segredos_sinteticos.sha256"
+    lista_sintetica.write_text(
+        f"{hash_hdw} {len(val_sint_hdw)} HDW_API_KEY\n{hash_ovpn} {len(val_sint_ovpn)} OVPN_TOKEN\n",
+        encoding="utf-8"
+    )
+
+    # Ambiente vazio
+    ret_vazio = verificar_revogados(caminho_lista=lista_sintetica, ambiente={})
+    assert ret_vazio is None
+
+    # Variáveis com strings vazias
+    ret_strings_vazias = verificar_revogados(
+        caminho_lista=lista_sintetica,
+        ambiente={"HDW_API_KEY": "", "OVPN_TOKEN": ""}
+    )
+    assert ret_strings_vazias is None
+
+
+def test_ca06_missao_0b2_janela_deslizante_substrings_sintetico(tmp_path):
+    """CA-06: Pre-commit hook detecta segredos sintéticos embutidos nos 4 formatos via janela deslizante (sintético em tmp_path)."""
+    hook_origem = Path(".githooks/pre-commit")
+    assert hook_origem.exists(), ".githooks/pre-commit não encontrado"
+
+    # Inicializa repositório Git temporário isolado
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.name", "Test Runner"], cwd=tmp_path, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, capture_output=True, check=True)
+
+    # Cria diretório de hooks e copia o script
+    hooks_dir = tmp_path / ".githooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    hook_destino = hooks_dir / "pre-commit"
+    hook_destino.write_bytes(hook_origem.read_bytes())
+
+    # Cria lista de bloqueio sintética no repositório temporário
+    val_sintetico = "segredo_sintetico_janela_teste_789"
+    hash_sintetico = hashlib.sha256(val_sintetico.encode("utf-8")).hexdigest()
+    (tmp_path / "segredos_revogados.sha256").write_text(
+        f"{hash_sintetico} {len(val_sintetico)} HDW_API_KEY\n",
+        encoding="utf-8"
+    )
+
+    # Cria arquivo com os 4 formatos sintéticos, um por linha
+    linhas = [
+        f'export HDW_API_KEY="${{HDW_API_KEY:-{val_sintetico}}}"',
+        f'HDW_API_KEY="{val_sintetico}"',
+        f"const token = '{val_sintetico}';",
+        f"prefixo_{val_sintetico}_sufixo"
+    ]
+    arquivo_teste = tmp_path / "arquivo_teste.txt"
+    arquivo_teste.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    subprocess.run(["git", "add", "arquivo_teste.txt"], cwd=tmp_path, capture_output=True, check=True)
+
+    res = subprocess.run([sys.executable, str(hook_destino)], cwd=tmp_path, capture_output=True, text=True)
+    assert res.returncode == 1, f"Hook deveria retornar 1 para arquivo com segredo, retornou {res.returncode}"
+    saida = res.stdout + res.stderr
+    for num_linha in (1, 2, 3, 4):
+        assert f"arquivo_teste.txt:{num_linha}" in saida, f"Referência arquivo_teste.txt:{num_linha} ausente na saída do hook"
+    assert val_sintetico not in saida, "Valor sintético não deve aparecer na saída do hook"
+
+
+def test_ca07_missao_0b2_varredura_arquivos_rastreados_lista_real():
+    """CA-07: Varredura de integridade em arquivos rastreados via git ls-files com lista real segredos_revogados.sha256."""
+    lista_path = Path("segredos_revogados.sha256")
+    assert lista_path.exists(), "segredos_revogados.sha256 não encontrado"
+
+    entradas = []
+    for linha in lista_path.read_text(encoding="utf-8").splitlines():
+        linha_limpa = linha.strip()
+        if not linha_limpa:
+            continue
+        partes = linha_limpa.split()
+        assert len(partes) == 3, f"Entrada inválida na lista: {linha_limpa}"
+        entradas.append((partes[0], int(partes[1]), partes[2]))
+
+    res = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True)
+    arquivos_rastreados = [f for f in res.stdout.splitlines() if f.strip()]
+
+    ocorrencias = []
+    for rel_path in arquivos_rastreados:
+        p = Path(rel_path)
+        if not p.is_file():
+            continue
+        try:
+            conteudo = p.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+
+        for num_linha, linha_texto in enumerate(conteudo.splitlines(), start=1):
+            for hash_revogado, tam, _ in entradas:
+                if len(linha_texto) < tam:
+                    continue
+                for i in range(len(linha_texto) - tam + 1):
+                    pedaco = linha_texto[i:i + tam]
+                    if hashlib.sha256(pedaco.encode("utf-8")).hexdigest() == hash_revogado:
+                        ocorrencias.append(f"{rel_path}:{num_linha}")
+                        break
+
+    assert len(ocorrencias) == 0, f"Segredo revogado encontrado em: {ocorrencias}"
+
+
+def test_ca08_missao_0b2_pre_commit_hook_repo_temporario(tmp_path):
+    """CA-08: Pre-commit hook bloqueia commits de segredos e autoriza commits limpos (sintético em tmp_path)."""
+    hook_origem = Path(".githooks/pre-commit")
+    assert hook_origem.exists(), ".githooks/pre-commit não encontrado"
+
+    # Inicializa repositório Git temporário isolado
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.name", "Test Runner"], cwd=tmp_path, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, capture_output=True, check=True)
+
+    # Cria diretório de hooks e copia o script
+    hooks_dir = tmp_path / ".githooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    hook_destino = hooks_dir / "pre-commit"
+    hook_destino.write_bytes(hook_origem.read_bytes())
+
+    # Cria lista de bloqueio sintética no repositório temporário
+    val_sintetico = "segredo_sintetico_para_precommit_hook"
+    hash_sintetico = hashlib.sha256(val_sintetico.encode("utf-8")).hexdigest()
+    (tmp_path / "segredos_revogados.sha256").write_text(
+        f"{hash_sintetico} {len(val_sintetico)} HDW_API_KEY\n",
+        encoding="utf-8"
+    )
+
+    # Teste 1: Arquivo com segredo sintético em stage deve ser bloqueado
+    arquivo_sujo = tmp_path / "config_vazada.py"
+    arquivo_sujo.write_text(f'API_KEY = "{val_sintetico}"\n', encoding="utf-8")
+    subprocess.run(["git", "add", "config_vazada.py"], cwd=tmp_path, capture_output=True, check=True)
+
+    res_hook_bloqueio = subprocess.run([sys.executable, str(hook_destino)], cwd=tmp_path, capture_output=True, text=True)
+    assert res_hook_bloqueio.returncode == 1, f"Hook deveria retornar 1 para arquivo com segredo, retornou {res_hook_bloqueio.returncode}"
+    assert "config_vazada.py:1" in res_hook_bloqueio.stdout or "config_vazada.py:1" in res_hook_bloqueio.stderr
+    assert val_sintetico not in res_hook_bloqueio.stdout and val_sintetico not in res_hook_bloqueio.stderr
+
+    # Teste 2: Arquivo limpo em stage deve passar com exit code 0
+    subprocess.run(["git", "reset", "HEAD", "config_vazada.py"], cwd=tmp_path, capture_output=True, check=True)
+    arquivo_limpo = tmp_path / "clean_code.py"
+    arquivo_limpo.write_text('print("hello world")\n', encoding="utf-8")
+    subprocess.run(["git", "add", "clean_code.py"], cwd=tmp_path, capture_output=True, check=True)
+
+    res_hook_limpo = subprocess.run([sys.executable, str(hook_destino)], cwd=tmp_path, capture_output=True, text=True)
+    assert res_hook_limpo.returncode == 0, f"Hook deveria retornar 0 para arquivo limpo: {res_hook_limpo.stderr}"
+

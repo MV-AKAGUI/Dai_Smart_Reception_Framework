@@ -8,6 +8,8 @@ Daisugi Tecnologias - Outubro de 2026
 import os
 import sys
 import hashlib
+from pathlib import Path
+import re
 import time
 from typing import Optional, Dict, Any, AsyncGenerator
 
@@ -37,6 +39,48 @@ HDW_TIMEOUT = float(os.getenv("HDW_TIMEOUT_SECONDS", "10.0"))
 CHUNK_SIZE = 1024 * 1024  # 1 MiB (Preservação estrita de RAM no servidor Linux CentOS 7)
 
 
+def verificar_revogados(caminho_lista: Optional[Path] = None, ambiente: Optional[dict] = None) -> None:
+    """
+    Barreira ativa de startup: valida integridade da lista de bloqueio e impede a subida
+    da aplicação caso alguma credencial revogada esteja presente no ambiente.
+    """
+    if caminho_lista is None:
+        caminho_efetivo = Path(__file__).resolve().parent / "segredos_revogados.sha256"
+    else:
+        caminho_efetivo = Path(caminho_lista)
+
+    if not caminho_efetivo.is_file():
+        raise RuntimeError("lista de revogados ausente")
+
+    try:
+        conteudo = caminho_efetivo.read_text(encoding="utf-8")
+    except Exception:
+        raise RuntimeError("lista de revogados ausente")
+
+    linhas = [l.strip() for l in conteudo.splitlines() if l.strip()]
+    if len(linhas) != 2:
+        raise RuntimeError("lista de revogados inválida")
+
+    padrao = re.compile(r"^[a-f0-9]{64} \d+ (HDW_API_KEY|OVPN_TOKEN)$")
+    entradas = []
+    for linha in linhas:
+        if not padrao.match(linha):
+            raise RuntimeError("lista de revogados inválida")
+        partes = linha.split()
+        entradas.append((partes[0], int(partes[1]), partes[2]))
+
+    env_map = os.environ if ambiente is None else ambiente
+
+    for hash_revogado, _, nome_var in entradas:
+        val = env_map.get(nome_var)
+        if val is not None and val != "":
+            val_hash = hashlib.sha256(val.encode("utf-8")).hexdigest()
+            if val_hash == hash_revogado:
+                raise RuntimeError(f"credencial revogada: {nome_var}")
+
+    return None
+
+
 class HdcHdwBridge:
     """
     Controlador de Enlace Seguro entre o HDC na nuvem (OCI) e o HDW físico local (Linux CentOS 7).
@@ -44,7 +88,8 @@ class HdcHdwBridge:
     validação contínua da cadeia de custódia na rota /authenticity.
     """
 
-    def __init__(self, base_url: str = HDW_BASE_URL, api_key: Optional[str] = HDW_API_KEY):
+    def __init__(self, base_url: str = HDW_BASE_URL, api_key: Optional[str] = HDW_API_KEY, caminho_lista: Optional[Path] = None):
+        verificar_revogados(caminho_lista=caminho_lista)
         self.base_url = base_url
         self.api_key = api_key
         self.headers = {
