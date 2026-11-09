@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 import psycopg2
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, List, Dict, Any
 import hashlib
 import time
 from daisugi_auth_guard import auth_guard, CORE_DEVELOPERS, validar_segredos_servidor, verificar_senha_soberana
@@ -76,7 +76,6 @@ class LoginResponse(BaseModel):
     salas_liberadas: List[Sala]
     clientes_acesso: List[str]
     token_jwt: str  # Suporte a RBAC e spec 4.2
-    token: Optional[str] = None  # Suporte aos contratos e testes E2E (CA-01 e CA-07)
 
 class TriageRequest(BaseModel):
     id_usuario: int
@@ -189,8 +188,7 @@ def login(request: LoginRequest):
                     Sala(nome="Governança de Travas ERP", funcao="Controle de Travas", cor="#F59E0B")
                 ],
                 clientes_acesso=["presidencia", "controladoria", "financeiro", "operacoes", "engenharia", "gg", "ti"],
-                token_jwt=dev_token,
-                token=dev_token
+                token_jwt=dev_token
             )
         else:
             raise HTTPException(status_code=401, detail="Credenciais inválidas. Acesso restrito à Portaria Soberana DAI.")
@@ -327,7 +325,8 @@ def processar_auditoria_kansa_async(hash_id: str, aprovado: bool):
     status = "APROVADO" if aprovado else "REJEITADO"
     print(f"✅ [BACKGROUND TASK] Auditoria finalizada. Status: {status}. Hudson notificado via Webhook.")
 
-@app.post("/api/quarentena/validar", status_code=202)
+# [DESATIVADO NA MISSAO 0b - DECISAO D1: ROTA DESLIGADA (404), CODIGO PRESERVADO]
+# @app.post("/api/quarentena/validar", status_code=202)
 def validar_quarentena(
     request: QuarentenaRequest, 
     bg_tasks: BackgroundTasks, 
@@ -394,16 +393,16 @@ def get_core_governance_status(dev_payload: Dict[str, Any] = Depends(auth_guard.
     }
 
 # ==========================================
-# 4.2. ROTAS FORENSES E ENLACE HDC × HDW
+# 4.2. ROTAS FORENSES E ENLACE HDC × HDW (DESATIVADAS NA MISSAO 0b - DECISOES D2/D3: 404)
 # ==========================================
 from hdc_hdw_bridge import hdc_hdw_bridge
 
-@app.get("/api/v1/hdw/status")
+# @app.get("/api/v1/hdw/status")
 async def get_hdw_status():
     """Consulta o status do enlace e saúde da OpenVPN com o HDW local (CentOS 7)."""
     return await hdc_hdw_bridge.verificar_status_enlace()
 
-@app.post("/api/v1/forensics/authenticity")
+# @app.post("/api/v1/forensics/authenticity")
 async def verificar_autenticidade(request: ForensicAuthenticityRequest):
     """
     Rota pericial homologada pelo Dr. Taylor:
@@ -414,17 +413,17 @@ async def verificar_autenticidade(request: ForensicAuthenticityRequest):
         hash_esperado=request.hash_esperado
     )
 
-@app.get("/api/v1/hdw/estantes")
+# @app.get("/api/v1/hdw/estantes")
 async def listar_estantes_hdw():
     """Retorna as 6 Estantes Canônicas da Biblioteca Multidisciplinar do HDW."""
     return await hdc_hdw_bridge.obter_catalogo_estantes()
 
-@app.get("/api/v1/hdw/estantes/{estante_id}/itens")
+# @app.get("/api/v1/hdw/estantes/{estante_id}/itens")
 async def listar_itens_estante_hdw(estante_id: str, limit: int = 50):
     """Consulta os itens/documentos custodiados em uma estante do HDW."""
     return await hdc_hdw_bridge.listar_itens_estante(estante_id=estante_id, limite=limit)
 
-@app.get("/api/v1/hdw/documentos/{cota_documento}/render")
+# @app.get("/api/v1/hdw/documentos/{cota_documento}/render")
 async def renderizar_documento_hdw(cota_documento: str):
     """
     Streaming binário direto do HDW (1 MiB chunks) para renderização no navegador da DAI.

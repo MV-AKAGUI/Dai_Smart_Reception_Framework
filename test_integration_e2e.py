@@ -51,7 +51,7 @@ def test_ca01_login_soberano_valido(client):
     dados = resp.json()
     assert dados.get("autenticado") is True
     assert dados.get("perfil") == "core_developer"
-    assert "token" in dados and len(dados["token"]) > 20
+    assert "token_jwt" in dados and len(dados["token_jwt"]) > 20
 
 
 def test_ca02_rejeicao_senha_incorreta(client):
@@ -98,7 +98,7 @@ def test_ca07_conferencia_ttl_token(client):
     payload = {"usuario": "ronaldoakagui", "senha": SENHA_TESTE}
     resp = client.post("/auth/login", json=payload)
     assert resp.status_code == 200
-    token = resp.json()["token"]
+    token = resp.json()["token_jwt"]
     decoded = jwt.decode(token, JWT_SECRET_TESTE, algorithms=["HS256"])
     ttl = decoded["exp"] - decoded["iat"]
     assert ttl == 28800, f"TTL esperado: 28800, obtido: {ttl}"
@@ -137,7 +137,7 @@ def test_ca09_validacao_porta_8010():
 def test_ca10_requirements_exatos():
     """CA-10: Validação de dependências estritas no requirements.txt."""
     req_txt = Path("requirements.txt").read_text(encoding="utf-8")
-    linhas = [l.strip() for l in req_txt.splitlines() if l.strip() and not l.startswith("#")]
+    linhas = [linha_item.strip() for linha_item in req_txt.splitlines() if linha_item.strip() and not linha_item.startswith("#")]
     for linha in linhas:
         assert ">=" not in linha, f"Linha contém >= indevido: {linha}"
         assert "==" in linha, f"Linha não possui versão exata ==: {linha}"
@@ -156,8 +156,74 @@ def test_ca11_saneamento_env_example():
     assert "DAISUGI_SOVEREIGN_PASS_HASH=" in env_txt, "DAISUGI_SOVEREIGN_PASS_HASH= deve constar no .env.example"
 
 
-def test_ca12_preservacao_escopo_compose():
-    """CA-12: Preservação de HDW_API_KEY e OVPN_TOKEN no docker-compose.yml."""
+def test_ca12_ausencia_credenciais_hdw_compose():
+    """CA-06: Ausência de HDW_API_KEY e OVPN_TOKEN no docker-compose.yml sob dai_backend."""
     compose_txt = Path("docker-compose.yml").read_text(encoding="utf-8")
-    assert "HDW_API_KEY" in compose_txt, "HDW_API_KEY deve ser preservada na Missão 0a"
-    assert "OVPN_TOKEN" in compose_txt, "OVPN_TOKEN deve ser preservada na Missão 0a"
+    assert "HDW_API_KEY" not in compose_txt, "HDW_API_KEY não deve constar no docker-compose.yml"
+    assert "OVPN_TOKEN" not in compose_txt, "OVPN_TOKEN não deve constar no docker-compose.yml"
+
+
+def test_ca13_bloqueio_mock_tokens():
+    """CA-01: Rejeição criptográfica de mock tokens estáticos sem assinatura válida."""
+    from fastapi import HTTPException
+    import daisugi_auth_guard
+    guard = daisugi_auth_guard.DaisugiAuthGuard()
+    for mock_token in ("token_jwt_operador_secreto", "token_jwt_cliente_comum"):
+        with pytest.raises(HTTPException) as exc_info:
+            guard.decode_token(mock_token)
+        assert exc_info.value.status_code == 401
+
+
+def test_ca14_desativacao_6_rotas_legadas_404(client):
+    """CA-03 e CA-04: As 6 rotas legadas respondem 404 Not Found."""
+    rotas = [
+        ("POST", "/api/quarentena/validar", {"documento": "teste"}),
+        ("GET", "/api/v1/hdw/status", None),
+        ("POST", "/api/v1/forensics/authenticity", {"arquivo": "teste"}),
+        ("GET", "/api/v1/hdw/estantes", None),
+        ("GET", "/api/v1/hdw/estantes/EST01/itens", None),
+        ("GET", "/api/v1/hdw/documentos/TESTE/render", None),
+    ]
+    for metodo, rota, payload in rotas:
+        if metodo == "POST":
+            resp = client.post(rota, json=payload or {})
+        else:
+            resp = client.get(rota)
+        assert resp.status_code == 404, f"Rota {metodo} {rota} deveria retornar 404, obteve {resp.status_code}"
+
+
+def test_ca15_resposta_login_sem_campo_token(client):
+    """CA-02: Payload de login contém apenas token_jwt, sem a chave legada duplicada 'token'."""
+    payload = {"usuario": "ronaldoakagui", "senha": SENHA_TESTE}
+    resp = client.post("/auth/login", json=payload)
+    assert resp.status_code == 200
+    dados = resp.json()
+    assert "token_jwt" in dados and len(dados["token_jwt"]) > 20
+    assert "token" not in dados, "Chave legada duplicada 'token' não deve constar no payload de login"
+
+
+def test_ca16_bridge_hdw_sem_valores_padrao():
+    """CA-07: hdc_hdw_bridge.py lê OVPN_TOKEN e HDW_API_KEY sem valores de fallback."""
+    bridge_txt = Path("hdc_hdw_bridge.py").read_text(encoding="utf-8")
+    for linha in bridge_txt.splitlines():
+        if 'os.getenv("OVPN_TOKEN"' in linha:
+            assert "," not in linha, f"OVPN_TOKEN não deve ter valor padrão em os.getenv: {linha}"
+        if 'os.getenv("HDW_API_KEY"' in linha:
+            assert "," not in linha, f"HDW_API_KEY não deve ter valor padrão em os.getenv: {linha}"
+
+
+def test_ca17_startup_api_sem_variaveis_hdw():
+    """CA-08: Processo filho sem variáveis HDW no ambiente importa api_backend e abre TestClient com saída 0."""
+    env_limpo = os.environ.copy()
+    env_limpo.pop("HDW_API_KEY", None)
+    env_limpo.pop("OVPN_TOKEN", None)
+    env_limpo["DAISUGI_JWT_SECRET"] = JWT_SECRET_TESTE
+    env_limpo["DAISUGI_SOVEREIGN_PASS_HASH"] = HASH_SOBERANO_TESTE
+    env_limpo["PYTHONPATH"] = os.getcwd()
+    cmd = [
+        sys.executable,
+        "-c",
+        "from fastapi.testclient import TestClient; import api_backend; client = TestClient(api_backend.app); resp = client.get('/health'); assert resp.status_code in (200, 404)"
+    ]
+    res = subprocess.run(cmd, env=env_limpo, capture_output=True, text=True, timeout=30)
+    assert res.returncode == 0, f"Falha no startup sem variáveis HDW: {res.stderr}\n{res.stdout}"

@@ -29,7 +29,7 @@ if __name__ == "__main__" and "--gerar-hash" in sys.argv:
     sys.exit(0)
 
 import jwt
-from fastapi import HTTPException, Security, Depends
+from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer()
@@ -120,10 +120,6 @@ class DaisugiAuthGuard:
 
     def decode_token(self, token: str) -> Dict[str, Any]:
         """Decodifica e valida a assinatura criptográfica do Token JWT."""
-        if token in ["token_jwt_operador_secreto", "token_jwt_cliente_comum"]:
-            role = "operator" if token == "token_jwt_operador_secreto" else "cliente"
-            return {"role": role, "sub": "mock_user", "is_core_developer": False}
-
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             return payload
